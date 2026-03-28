@@ -299,8 +299,23 @@ GET    /api/v1/suggestions/companions?q=<검색어>
 | log_type | string? | `cafe` \| `brew` |
 | date_from | date? | `YYYY-MM-DD` |
 | date_to | date? | `YYYY-MM-DD` |
-| page | int? | 기본값 1 |
-| per_page | int? | 기본값 20 |
+| sort_by | string? | 정렬 기준 필드. 기본값: `recorded_at` |
+| order | string? | 정렬 방향 `asc` \| `desc`. 기본값: `desc` |
+| cursor | string? | 불투명 커서 (이전 응답의 `next_cursor` 값) |
+| limit | int? | 페이지당 개수. 기본값: 20 |
+
+### 목록 조회 응답
+
+```json
+{
+  "items": [...],
+  "next_cursor": "<opaque base64>",
+  "has_next": true
+}
+```
+
+> `next_cursor`가 `null`이면 마지막 페이지입니다.
+> 커서 내부에 `sort_by`와 `order`가 인코딩되어 있어, 다음 페이지 요청 시 커서만 전달하면 정렬 기준이 유지됩니다.
 
 ### 요청 바디 구조 — 중첩 Discriminated Union
 
