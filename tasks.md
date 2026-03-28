@@ -1,0 +1,213 @@
+# Coffee of the Day — Task List
+
+> plan.md 기반 세부 실행 태스크입니다.
+> 각 태스크는 완료 여부를 명확히 판단할 수 있는 단위로 작성했습니다.
+
+---
+
+## Phase 1 — 프로젝트 기반 + 기록 CRUD
+
+### 1-1. 프로젝트 초기 설정
+
+**Backend**
+- [ ] `backend/` 디렉토리 생성 및 Go 모듈 초기화 (`go mod init`)
+- [ ] 의존성 추가: `go-chi/chi`, `golang-migrate`, `sqlc`, `mattn/go-sqlite3`
+- [ ] 디렉토리 구조 생성: `cmd/server/`, `internal/{handler,service,repository,domain}/`, `db/{migrations,queries}/`, `config/`
+- [ ] `config/config.go` — `DB_PATH`, `PORT` 환경변수 로딩
+- [ ] `cmd/server/main.go` — DB 연결, 라우터 마운트, 서버 시작
+
+**Frontend**
+- [ ] `frontend/` Vite + React + TypeScript 프로젝트 생성
+- [ ] 의존성 추가: `tailwindcss`, `react-router-dom`, `@tanstack/react-query`
+- [ ] Tailwind CSS 설정 (`tailwind.config.ts`, `postcss.config.ts`)
+- [ ] 디렉토리 구조 생성: `src/{pages,components,api,types,hooks}/`
+- [ ] `src/main.tsx` — `QueryClientProvider`, `RouterProvider` 설정
+- [ ] `src/api/client.ts` — base URL, `X-User-Id` 헤더, 공통 에러 처리
+- [ ] 기본 라우터 설정: `/`, `/logs/new`, `/logs/:id`, `/logs/:id/edit`
+
+---
+
+### 1-2. DB 스키마 및 마이그레이션
+
+- [ ] `golang-migrate` CLI 설치 및 사용법 확인
+- [ ] `001_create_users.up.sql` / `.down.sql` 작성
+- [ ] `002_create_coffee_logs.up.sql` / `.down.sql` 작성
+- [ ] `003_create_cafe_logs.up.sql` / `.down.sql` 작성
+- [ ] `004_create_brew_logs.up.sql` / `.down.sql` 작성
+- [ ] `cmd/server/main.go`에서 서버 시작 시 마이그레이션 자동 실행
+- [ ] `sqlc.yaml` 설정 파일 작성 (SQLite 드라이버, 쿼리/스키마 경로, 출력 경로)
+
+---
+
+### 1-3. Backend — sqlc 쿼리 및 도메인 타입
+
+**sqlc 쿼리 작성** (`db/queries/`)
+- [ ] `coffee_logs.sql` — `InsertLog`, `GetLogByID`, `ListLogs`, `UpdateLog`, `DeleteLog`
+- [ ] `cafe_logs.sql` — `InsertCafeLog`, `GetCafeLogByLogID`, `UpdateCafeLog`
+- [ ] `brew_logs.sql` — `InsertBrewLog`, `GetBrewLogByLogID`, `UpdateBrewLog`
+- [ ] `sqlc generate` 실행 및 생성 코드 확인
+
+**도메인 타입** (`internal/domain/`)
+- [ ] `log.go` — `LogType`, `CoffeeLog`, `CafeDetail`, `BrewDetail`, `CoffeeLogFull` 타입 정의
+- [ ] `[]string` ↔ JSON 직렬화 헬퍼 (SQLite TEXT 배열 처리용)
+
+---
+
+### 1-4. Backend — Repository
+
+- [ ] `internal/repository/log_repository.go` 인터페이스 및 SQLite 구현체 정의
+- [ ] `CreateLog` — 트랜잭션으로 `coffee_logs` + 서브 테이블 동시 삽입
+- [ ] `GetLogByID` — `coffee_logs` + 서브 테이블 JOIN 조회, `user_id` 소유권 검증
+- [ ] `ListLogs` — 필터(`log_type`, `date_from`, `date_to`) + cursor-based 페이지네이션
+- [ ] `UpdateLog` — 트랜잭션으로 `coffee_logs` + 서브 테이블 동시 수정
+- [ ] `DeleteLog` — `coffee_logs` 삭제 (CASCADE로 서브 테이블 자동 삭제)
+
+**Cursor 구현**
+- [ ] 커서 인코딩: `{sort_by, order, sort_value, id}` → base64 opaque 문자열
+- [ ] 커서 디코딩 및 SQL WHERE 조건 생성 (`recorded_at < ? OR (recorded_at = ? AND id < ?)`)
+
+---
+
+### 1-5. Backend — Service
+
+- [ ] `internal/service/log_service.go` — `LogService` 인터페이스 정의
+- [ ] `CreateLog(userID, req)` — 유효성 검사 (`log_type`에 따라 서브 객체 필수 확인)
+- [ ] `GetLog(userID, logID)` — 소유권 검증 포함
+- [ ] `ListLogs(userID, filter)` — 필터·커서 파라미터 전달
+- [ ] `UpdateLog(userID, logID, req)` — 소유권 검증 후 수정
+- [ ] `DeleteLog(userID, logID)` — 소유권 검증 후 삭제
+
+---
+
+### 1-6. Backend — Handler 및 미들웨어
+
+- [ ] `internal/handler/middleware.go` — `X-User-Id` 헤더 파싱 미들웨어 (POC)
+- [ ] `internal/handler/middleware.go` — CORS 미들웨어 (`localhost:5173` 허용)
+- [ ] `internal/handler/log_handler.go` — `POST /api/v1/logs`
+- [ ] `internal/handler/log_handler.go` — `GET /api/v1/logs`
+- [ ] `internal/handler/log_handler.go` — `GET /api/v1/logs/:id`
+- [ ] `internal/handler/log_handler.go` — `PUT /api/v1/logs/:id`
+- [ ] `internal/handler/log_handler.go` — `DELETE /api/v1/logs/:id`
+- [ ] `cmd/server/main.go` — 라우터에 핸들러·미들웨어 연결
+
+---
+
+### 1-7. Frontend — 타입 및 API 클라이언트
+
+- [ ] `src/types/log.ts` — `CoffeeLogBase`, `CafeDetail`, `BrewDetail`, `CafeLogFull`, `BrewLogFull`, `CoffeeLogFull` (Discriminated Union)
+- [ ] `src/types/common.ts` — `CursorPage<T>`, 공통 에러 타입
+- [ ] `src/api/logs.ts` — `getLogs`, `getLog`, `createLog`, `updateLog`, `deleteLog`
+- [ ] `src/hooks/useLogs.ts` — `useLogList` (`useInfiniteQuery`), `useLog`, `useCreateLog`, `useUpdateLog`, `useDeleteLog`
+
+---
+
+### 1-8. Frontend — 페이지 및 컴포넌트
+
+**공용 컴포넌트**
+- [ ] `src/components/Layout.tsx` — 공통 레이아웃 (헤더, 컨텐츠 영역)
+- [ ] `src/components/LogCard.tsx` — 목록에서 보이는 기록 카드 (cafe/brew 분기)
+- [ ] `src/components/RatingDisplay.tsx` — 0.5 단위 별점 표시
+- [ ] `src/components/RatingInput.tsx` — 0.5 단위 별점 입력
+
+**페이지**
+- [ ] `src/pages/HomePage.tsx` — 기록 카드 목록, 무한 스크롤 (`IntersectionObserver`)
+- [ ] `src/pages/LogDetailPage.tsx` — 기록 상세 보기 (cafe/brew 분기 렌더링)
+- [ ] `src/pages/LogFormPage.tsx` — 신규 작성 / 수정 통합 폼
+  - [ ] cafe/brew 탭 전환
+  - [ ] 공통 필드 섹션 (recorded_at, companions)
+  - [ ] 카페 전용 섹션
+  - [ ] 브루 전용 섹션 (brew_method 선택, 레시피 입력)
+  - [ ] `brew_steps` 동적 입력 (추가/삭제/위아래 버튼)
+
+**Phase 1 완료 기준**
+- [ ] 브라우저에서 카페 기록 생성 후 목록에서 확인
+- [ ] 기록 수정 및 삭제 동작
+- [ ] 브루 기록 생성·조회 동작
+
+---
+
+## Phase 2 — 브루 폼 고도화 + 목록 필터
+
+### 2-1. 브루 기록 전용 폼 UI 고도화
+
+- [ ] `brew_method` 선택 UI — 버튼 그룹 (아이콘 또는 라벨)
+- [ ] `brew_device` 자유 입력 필드
+- [ ] 레시피 섹션 레이아웃 개선 (원두량/물량 비율 자동 계산 표시)
+
+### 2-2. 목록 필터
+
+- [ ] `log_type` 필터 탭 UI (전체 / 카페 / 브루)
+- [ ] 날짜 범위 필터 UI (`date_from`, `date_to` 날짜 선택)
+- [ ] 필터 상태를 URL 쿼리 파라미터에 반영 (공유·북마크 가능)
+- [ ] 필터 변경 시 TanStack Query 캐시 키 갱신
+
+### 2-3. 무한 스크롤 고도화
+
+- [ ] 스크롤 하단 도달 감지 (`IntersectionObserver` sentinel 요소)
+- [ ] 다음 페이지 로딩 중 스켈레톤 UI
+- [ ] 마지막 페이지 도달 시 "더 이상 기록이 없습니다" 표시
+
+**Phase 2 완료 기준**
+- [ ] 브루 기록을 레시피 포함 완전히 기록 가능
+- [ ] 타입/날짜 필터로 원하는 기록만 조회 가능
+- [ ] 무한 스크롤로 전체 기록 탐색 가능
+
+---
+
+## Phase 3 — 자동완성
+
+### 3-1. 자동완성 API (Backend)
+
+- [ ] `db/queries/suggestions.sql` — 유저의 `tasting_tags` 집계 쿼리 (빈도순)
+- [ ] `db/queries/suggestions.sql` — 유저의 `companions` 집계 쿼리 (빈도순)
+- [ ] `GET /api/v1/suggestions/tags?q=` 핸들러
+- [ ] `GET /api/v1/suggestions/companions?q=` 핸들러
+
+### 3-2. 자동완성 컴포넌트 (Frontend)
+
+- [ ] `src/api/suggestions.ts` — `getSuggestions(type, q)`
+- [ ] `src/hooks/useSuggestions.ts` — `useTagSuggestions`, `useCompanionSuggestions`
+- [ ] `src/components/TagInput.tsx` — 텍스트 입력 + 드롭다운 추천 + 태그 뱃지
+- [ ] `LogFormPage`의 `tasting_tags` 필드에 `TagInput` 적용
+- [ ] `LogFormPage`의 `companions` 필드에 `TagInput` 적용
+
+**Phase 3 완료 기준**
+- [ ] 태그 입력 시 이전 태그 자동완성 제안
+- [ ] 동반자 입력 시 이전 이름 자동완성 제안
+
+---
+
+## Phase 4 — 계정 및 인증
+
+### 4-1. DB 마이그레이션
+
+- [ ] `005_add_auth_to_users.up.sql` — `users` 테이블에 `email`, `password_hash` 컬럼 추가
+- [ ] `005_add_auth_to_users.down.sql`
+
+### 4-2. Backend — 인증 API
+
+- [ ] `bcrypt` 의존성 추가
+- [ ] JWT 라이브러리 추가 (`golang-jwt/jwt`)
+- [ ] `POST /api/v1/auth/register` — 회원가입, 비밀번호 bcrypt 해싱
+- [ ] `POST /api/v1/auth/login` — 로그인, JWT 발급, httpOnly cookie 설정 (`SameSite=Strict`)
+- [ ] `POST /api/v1/auth/refresh` — 토큰 갱신
+- [ ] `POST /api/v1/auth/logout` — 쿠키 만료 처리
+- [ ] JWT 검증 미들웨어 (`X-User-Id` 헤더 미들웨어 교체)
+
+### 4-3. Frontend — 인증 UI
+
+- [ ] `src/types/auth.ts` — `User`, `LoginRequest`, `RegisterRequest` 타입
+- [ ] `src/api/auth.ts` — `login`, `register`, `logout`, `refresh`
+- [ ] `src/hooks/useAuth.ts` — 인증 상태 관리
+- [ ] `src/pages/LoginPage.tsx`
+- [ ] `src/pages/RegisterPage.tsx`
+- [ ] 미인증 시 로그인 페이지로 리다이렉트 (Protected Route)
+- [ ] `X-User-Id` 헤더 방식 제거, 쿠키 기반으로 전환
+
+**Phase 4 완료 기준**
+- [ ] 회원가입 후 로그인하여 본인 기록만 조회·수정·삭제 가능
+- [ ] 로그아웃 후 기록에 접근 불가
+
+---
+
+*Last updated: 2026-03-28*

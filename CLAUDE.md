@@ -7,11 +7,22 @@
 
 ## TEST
 
+### Backend
+
 - Always write tests when adding or modifying functionality.
 - Domain logic and feature-level modules must be covered by unit tests.
 - Service-level workflows, external integrations, and end-to-end business flows should be covered by integration tests.
 - Use unit tests by default unless the test scope requires interaction between multiple components.
 - Do not modify failing existing tests without first analyzing the root cause.
+
+### Frontend
+
+- Always write tests when adding or modifying functionality.
+- UI logic, state management, and reusable modules must be covered by unit tests.
+- User flows, component interactions, and API integration scenarios should be covered by integration or end-to-end tests.
+- Prefer behavior-focused tests based on user interactions rather than implementation details.
+- Do not modify failing existing tests without first analyzing the root cause.
+- Critical user journeys must be validated with end-to-end tests.
 
 ## COMMIT
 
