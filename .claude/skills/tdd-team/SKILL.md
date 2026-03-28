@@ -21,6 +21,16 @@ This skill assembles a four-agent team that executes the Red → Green → Refac
 
 Follow these steps in order.
 
+### 0. Clean up any previous tdd-team state
+
+Check whether `~/.claude/teams/tdd-team/` already exists. If it does, the previous team was not shut down cleanly. Remove the stale state before proceeding:
+
+```bash
+rm -rf ~/.claude/teams/tdd-team ~/.claude/tasks/tdd-team
+```
+
+This is safe to run even when no previous team exists.
+
 ### 1. Detect the project root
 
 Run `pwd` with the Bash tool to get the current working directory. Use this path as `{PROJECT_ROOT}` in all agent prompts below.
@@ -30,8 +40,10 @@ Run `pwd` with the Bash tool to get the current working directory. Use this path
 ```
 team_name: "tdd-team"
 description: "TDD team. The team-lead breaks requirements into tasks and orchestrates Red → Green → Refactor cycles."
-agent_type: "team-lead"
+agent_type: "orchestrator"
 ```
+
+> **Why `orchestrator` and not `team-lead`**: TeamCreate registers the *caller* (the main Claude session) as a placeholder member using the `agent_type` as its name. If you use `"team-lead"` here, the placeholder occupies the name `team-lead@tdd-team`, and the agent you spawn next gets bumped to `team-lead-2`. Using a neutral type like `"orchestrator"` keeps the name `team-lead` free for the spawned agent.
 
 ### 3. Spawn all four agents simultaneously
 
