@@ -57,7 +57,7 @@
 - The target audience is a developer with Java/Spring experience but no Go or TypeScript/React background.
 - Explain design choices by mapping them to familiar Java/Spring concepts where possible.
 - Focus on *why*, not just *what* — code listings alone are not enough.
-- File location: `study/phase_{N}_{M}_{backend|frontend}.md`
+- File location: `guide/phase/phase_{N}_{M}_{backend|frontend}.md`
   - Example: `study/phase_1_3_backend.md`, `study/phase_1_4_backend.md`
 - Include the study document in the same commit as the implementation.
 
@@ -68,5 +68,5 @@ Read spec.md first when requirements are unclear.
 - spec.md: functional and business specification
 - plan.md: development plan
 - tasks.md: implementation task checklist
-- architecture_previce/backend.md: backend architecture rationale and dependency decisions
-- architecture_previce/frontend.md: frontend architecture rationale and dependency decisions
+- guide/architecture/backend.md: backend architecture rationale and dependency decisions
+- guide/architecture/frontend.md: frontend architecture rationale and dependency decisions
