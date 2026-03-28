@@ -14,18 +14,18 @@
 ### 1-1. 프로젝트 초기 설정
 
 **Backend**
-- [ ] `backend/` 디렉토리 Go 모듈 초기화 (`go mod init`)
-- [ ] 의존성 추가: `chi`, `golang-migrate`, `sqlc`, `mattn/go-sqlite3`
-- [ ] 디렉토리 구조 생성: `cmd/server`, `internal/{handler,service,repository,domain}`, `db/{migrations,queries}`
-- [ ] `config/` — 환경변수 로딩 (`DB_PATH`, `PORT`)
-- [ ] `cmd/server/main.go` — 서버 부트스트랩 (라우터 연결, DB 연결)
+- `backend/` 디렉토리 Go 모듈 초기화 (`go mod init`)
+- 의존성 추가: `chi`, `golang-migrate`, `sqlc`, `mattn/go-sqlite3`
+- 디렉토리 구조 생성: `cmd/server`, `internal/{handler,service,repository,domain}`, `db/{migrations,queries}`
+- `config/` — 환경변수 로딩 (`DB_PATH`, `PORT`)
+- `cmd/server/main.go` — 서버 부트스트랩 (라우터 연결, DB 연결)
 
 **Frontend**
-- [ ] `frontend/` Vite + React + TypeScript 프로젝트 생성
-- [ ] 의존성 추가: `tailwindcss`, `react-router-dom`, `@tanstack/react-query`
-- [ ] 디렉토리 구조 생성: `src/{pages,components,api,types,hooks}`
-- [ ] 기본 라우터 설정 (`/`, `/logs/new`, `/logs/:id`, `/logs/:id/edit`)
-- [ ] API 클라이언트 기반 코드 (`src/api/client.ts`) — base URL, 공통 헤더, 에러 처리
+- `frontend/` Vite + React + TypeScript 프로젝트 생성
+- 의존성 추가: `tailwindcss`, `react-router-dom`, `@tanstack/react-query`
+- 디렉토리 구조 생성: `src/{pages,components,api,types,hooks}`
+- 기본 라우터 설정 (`/`, `/logs/new`, `/logs/:id`, `/logs/:id/edit`)
+- API 클라이언트 기반 코드 (`src/api/client.ts`) — base URL, 공통 헤더, 에러 처리
 
 ### 1-2. DB 스키마 및 마이그레이션
 

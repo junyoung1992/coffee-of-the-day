@@ -10,32 +10,32 @@
 ### 1-1. 프로젝트 초기 설정
 
 **Backend**
-- [ ] `backend/` 디렉토리 생성 및 Go 모듈 초기화 (`go mod init`)
-- [ ] 의존성 추가: `go-chi/chi`, `golang-migrate`, `sqlc`, `mattn/go-sqlite3`
-- [ ] 디렉토리 구조 생성: `cmd/server/`, `internal/{handler,service,repository,domain}/`, `db/{migrations,queries}/`, `config/`
-- [ ] `config/config.go` — `DB_PATH`, `PORT` 환경변수 로딩
-- [ ] `cmd/server/main.go` — DB 연결, 라우터 마운트, 서버 시작
+- [x] `backend/` 디렉토리 생성 및 Go 모듈 초기화 (`go mod init`)
+- [x] 의존성 추가: `go-chi/chi`, `golang-migrate`, `sqlc`, `mattn/go-sqlite3`
+- [x] 디렉토리 구조 생성: `cmd/server/`, `internal/{handler,service,repository,domain}/`, `db/{migrations,queries}/`, `config/`
+- [x] `config/config.go` — `DB_PATH`, `PORT` 환경변수 로딩
+- [x] `cmd/server/main.go` — DB 연결, 라우터 마운트, 서버 시작
 
 **Frontend**
-- [ ] `frontend/` Vite + React + TypeScript 프로젝트 생성
-- [ ] 의존성 추가: `tailwindcss`, `react-router-dom`, `@tanstack/react-query`
-- [ ] Tailwind CSS 설정 (`tailwind.config.ts`, `postcss.config.ts`)
-- [ ] 디렉토리 구조 생성: `src/{pages,components,api,types,hooks}/`
-- [ ] `src/main.tsx` — `QueryClientProvider`, `RouterProvider` 설정
-- [ ] `src/api/client.ts` — base URL, `X-User-Id` 헤더, 공통 에러 처리
-- [ ] 기본 라우터 설정: `/`, `/logs/new`, `/logs/:id`, `/logs/:id/edit`
+- [x] `frontend/` Vite + React + TypeScript 프로젝트 생성
+- [x] 의존성 추가: `tailwindcss`, `react-router-dom`, `@tanstack/react-query`
+- [x] Tailwind CSS 설정 (v4: `tailwind.config.ts`/`postcss.config.ts` 대신 `@tailwindcss/vite` 플러그인 방식으로 처리)
+- [x] 디렉토리 구조 생성: `src/{pages,components,api,types,hooks}/`
+- [x] `src/main.tsx` — `QueryClientProvider`, `RouterProvider` 설정
+- [x] `src/api/client.ts` — base URL, `X-User-Id` 헤더, 공통 에러 처리
+- [x] 기본 라우터 설정: `/`, `/logs/new`, `/logs/:id`, `/logs/:id/edit`
 
 ---
 
 ### 1-2. DB 스키마 및 마이그레이션
 
-- [ ] `golang-migrate` CLI 설치 및 사용법 확인
-- [ ] `001_create_users.up.sql` / `.down.sql` 작성
-- [ ] `002_create_coffee_logs.up.sql` / `.down.sql` 작성
-- [ ] `003_create_cafe_logs.up.sql` / `.down.sql` 작성
-- [ ] `004_create_brew_logs.up.sql` / `.down.sql` 작성
-- [ ] `cmd/server/main.go`에서 서버 시작 시 마이그레이션 자동 실행
-- [ ] `sqlc.yaml` 설정 파일 작성 (SQLite 드라이버, 쿼리/스키마 경로, 출력 경로)
+- [x] `golang-migrate` CLI 설치 및 사용법 확인 (Go 라이브러리로 통합)
+- [x] `001_create_users.up.sql` / `.down.sql` 작성
+- [x] `002_create_coffee_logs.up.sql` / `.down.sql` 작성
+- [x] `003_create_cafe_logs.up.sql` / `.down.sql` 작성
+- [x] `004_create_brew_logs.up.sql` / `.down.sql` 작성
+- [x] `cmd/server/main.go`에서 서버 시작 시 마이그레이션 자동 실행
+- [x] `sqlc.yaml` 설정 파일 작성 (SQLite 드라이버, 쿼리/스키마 경로, 출력 경로)
 
 ---
 
