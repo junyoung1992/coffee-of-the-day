@@ -63,7 +63,7 @@
 
 ## REFERENCE
 
-Read spec.md first when requirements are unclear.
+Read spec.md and plan.md first when requirements are unclear.
 
 - spec.md: functional and business specification
 - plan.md: development plan

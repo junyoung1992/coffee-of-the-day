@@ -70,12 +70,12 @@
 
 ### 1-5. Backend — Service
 
-- [ ] `internal/service/log_service.go` — `LogService` 인터페이스 정의
-- [ ] `CreateLog(userID, req)` — 유효성 검사 (`log_type`에 따라 서브 객체 필수 확인)
-- [ ] `GetLog(userID, logID)` — 소유권 검증 포함
-- [ ] `ListLogs(userID, filter)` — 필터·커서 파라미터 전달
-- [ ] `UpdateLog(userID, logID, req)` — 소유권 검증 후 수정
-- [ ] `DeleteLog(userID, logID)` — 소유권 검증 후 삭제
+- [x] `internal/service/log_service.go` — `LogService` 인터페이스 정의
+- [x] `CreateLog(userID, req)` — 유효성 검사 (`log_type`에 따라 서브 객체 필수 확인)
+- [x] `GetLog(userID, logID)` — 소유권 검증 포함
+- [x] `ListLogs(userID, filter)` — 필터·커서 파라미터 전달
+- [x] `UpdateLog(userID, logID, req)` — 소유권 검증 후 수정
+- [x] `DeleteLog(userID, logID)` — 소유권 검증 후 삭제
 
 ---
 
