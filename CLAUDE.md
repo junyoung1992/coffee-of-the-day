@@ -43,6 +43,16 @@
 - BREAKING CHANGE: a commit that has a footer BREAKING CHANGE:, or appends a ! after the type/scope, introduces a breaking API change
 - others: build:, chore:, ci:, docs:, style:, refactor:, perf:, test:, revert:
 
+## STUDY
+
+- After completing each phase task, write a study document explaining what was built and why.
+- The target audience is a developer with Java/Spring experience but no Go or TypeScript/React background.
+- Explain design choices by mapping them to familiar Java/Spring concepts where possible.
+- Focus on *why*, not just *what* — code listings alone are not enough.
+- File location: `study/phase_{N}_{M}_{backend|frontend}.md`
+  - Example: `study/phase_1_3_backend.md`, `study/phase_1_4_backend.md`
+- Include the study document in the same commit as the implementation.
+
 ## REFERENCE
 
 Read spec.md first when requirements are unclear.
