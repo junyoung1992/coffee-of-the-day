@@ -16,6 +16,8 @@
 ## COMMIT
 
 - Follow the Conventional Commits specification.
+- Do not create commits automatically.
+- All commits must be performed only after review is completed and upon explicit user request.
 
 ```
 <type>[optional scope]: <description>
@@ -37,3 +39,5 @@ Read spec.md first when requirements are unclear.
 - spec.md: functional and business specification
 - plan.md: development plan (7 phases)
 - tasks.md: implementation task checklist
+- architecture_previce/backend.md: backend architecture rationale and dependency decisions
+- architecture_previce/frontend.md: frontend architecture rationale and dependency decisions
