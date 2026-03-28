@@ -42,14 +42,14 @@
 ### 1-3. Backend — sqlc 쿼리 및 도메인 타입
 
 **sqlc 쿼리 작성** (`db/queries/`)
-- [ ] `coffee_logs.sql` — `InsertLog`, `GetLogByID`, `ListLogs`, `UpdateLog`, `DeleteLog`
-- [ ] `cafe_logs.sql` — `InsertCafeLog`, `GetCafeLogByLogID`, `UpdateCafeLog`
-- [ ] `brew_logs.sql` — `InsertBrewLog`, `GetBrewLogByLogID`, `UpdateBrewLog`
-- [ ] `sqlc generate` 실행 및 생성 코드 확인
+- [x] `coffee_logs.sql` — `InsertLog`, `GetLogByID`, `ListLogs`, `UpdateLog`, `DeleteLog`
+- [x] `cafe_logs.sql` — `InsertCafeLog`, `GetCafeLogByLogID`, `UpdateCafeLog`
+- [x] `brew_logs.sql` — `InsertBrewLog`, `GetBrewLogByLogID`, `UpdateBrewLog`
+- [x] `sqlc generate` 실행 및 생성 코드 확인
 
 **도메인 타입** (`internal/domain/`)
-- [ ] `log.go` — `LogType`, `CoffeeLog`, `CafeDetail`, `BrewDetail`, `CoffeeLogFull` 타입 정의
-- [ ] `[]string` ↔ JSON 직렬화 헬퍼 (SQLite TEXT 배열 처리용)
+- [x] `log.go` — `LogType`, `CoffeeLog`, `CafeDetail`, `BrewDetail`, `CoffeeLogFull` 타입 정의
+- [x] `[]string` ↔ JSON 직렬화 헬퍼 (SQLite TEXT 배열 처리용)
 
 ---
 
