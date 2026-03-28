@@ -55,16 +55,16 @@
 
 ### 1-4. Backend — Repository
 
-- [ ] `internal/repository/log_repository.go` 인터페이스 및 SQLite 구현체 정의
-- [ ] `CreateLog` — 트랜잭션으로 `coffee_logs` + 서브 테이블 동시 삽입
-- [ ] `GetLogByID` — `coffee_logs` + 서브 테이블 JOIN 조회, `user_id` 소유권 검증
-- [ ] `ListLogs` — 필터(`log_type`, `date_from`, `date_to`) + cursor-based 페이지네이션
-- [ ] `UpdateLog` — 트랜잭션으로 `coffee_logs` + 서브 테이블 동시 수정
-- [ ] `DeleteLog` — `coffee_logs` 삭제 (CASCADE로 서브 테이블 자동 삭제)
+- [x] `internal/repository/log_repository.go` 인터페이스 및 SQLite 구현체 정의
+- [x] `CreateLog` — 트랜잭션으로 `coffee_logs` + 서브 테이블 동시 삽입
+- [x] `GetLogByID` — `coffee_logs` + 서브 테이블 JOIN 조회, `user_id` 소유권 검증
+- [x] `ListLogs` — 필터(`log_type`, `date_from`, `date_to`) + cursor-based 페이지네이션
+- [x] `UpdateLog` — 트랜잭션으로 `coffee_logs` + 서브 테이블 동시 수정
+- [x] `DeleteLog` — `coffee_logs` 삭제 (CASCADE로 서브 테이블 자동 삭제)
 
 **Cursor 구현**
-- [ ] 커서 인코딩: `{sort_by, order, sort_value, id}` → base64 opaque 문자열
-- [ ] 커서 디코딩 및 SQL WHERE 조건 생성 (`recorded_at < ? OR (recorded_at = ? AND id < ?)`)
+- [x] 커서 인코딩: `{sort_by, order, sort_value, id}` → base64 opaque 문자열
+- [x] 커서 디코딩 및 SQL WHERE 조건 생성 (`recorded_at < ? OR (recorded_at = ? AND id < ?)`)
 
 ---
 

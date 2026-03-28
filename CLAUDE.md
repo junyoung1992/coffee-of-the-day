@@ -2,8 +2,16 @@
 
 ## CODE STYLE
 
+### API
 - All APIs must be implemented in compliance with the OpenAPI Specification.
 - The API specification must be maintained in openapi.yml using the standard OpenAPI format.
+
+### COMMENTS
+- Write explanatory comments in Korean.
+- Keep technical terms, domain terminology, method names, and identifiers in their original language when translation would reduce clarity.
+- If the business logic flow cannot be clearly understood from method names alone, comments explaining the logic flow must be added.
+- Avoid unnecessary comments that only describe obvious or self-explanatory code.
+- Use comments to explain why, not what, whenever possible.
 
 ## TEST
 
@@ -58,7 +66,7 @@
 Read spec.md first when requirements are unclear.
 
 - spec.md: functional and business specification
-- plan.md: development plan (7 phases)
+- plan.md: development plan
 - tasks.md: implementation task checklist
 - architecture_previce/backend.md: backend architecture rationale and dependency decisions
 - architecture_previce/frontend.md: frontend architecture rationale and dependency decisions
