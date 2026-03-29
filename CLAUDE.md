@@ -58,7 +58,7 @@
 - Explain design choices by mapping them to familiar Java/Spring concepts where possible.
 - Focus on *why*, not just *what* — code listings alone are not enough.
 - File location: `guide/phase/phase_{N}_{M}_{backend|frontend}.md`
-  - Example: `study/phase_1_3_backend.md`, `study/phase_1_4_backend.md`
+  - Example: `guide/phase/phase_1_3_backend.md`, `guide/phase/phase_1_4_backend.md`
 - Include the study document in the same commit as the implementation.
 
 ## REFERENCE

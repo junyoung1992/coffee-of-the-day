@@ -7,13 +7,16 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-migrate/migrate/v4"
 	migratesqlite3 "github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/mattn/go-sqlite3"
 
 	"coffee-of-the-day/backend/config"
+	"coffee-of-the-day/backend/internal/handler"
+	"coffee-of-the-day/backend/internal/repository"
+	"coffee-of-the-day/backend/internal/service"
 )
 
 func main() {
@@ -29,13 +32,37 @@ func main() {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
 
+	// 의존성 연결: Repository → Service → Handler
+	logRepo := repository.NewSQLiteLogRepository(db)
+	logSvc := service.NewLogService(logRepo)
+	logHandler := handler.NewLogHandler(logSvc)
+
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(chimiddleware.Logger)
+	r.Use(chimiddleware.Recoverer)
+
+	// CORS는 전역으로 적용: OPTIONS preflight가 UserIDMiddleware에 도달하지 않도록
+	r.Use(handler.CORSMiddleware)
+
+	// OPTIONS 와일드카드: CORS 미들웨어가 preflight를 처리할 수 있도록 라우트를 열어둔다
+	r.Options("/*", func(w http.ResponseWriter, r *http.Request) {})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "ok")
+	})
+
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/logs", func(r chi.Router) {
+			// UserID 미들웨어: POC에서 X-User-Id 헤더로 사용자 식별
+			r.Use(handler.UserIDMiddleware)
+
+			r.Post("/", logHandler.CreateLog)
+			r.Get("/", logHandler.ListLogs)
+			r.Get("/{id}", logHandler.GetLog)
+			r.Put("/{id}", logHandler.UpdateLog)
+			r.Delete("/{id}", logHandler.DeleteLog)
+		})
 	})
 
 	addr := ":" + cfg.Port
