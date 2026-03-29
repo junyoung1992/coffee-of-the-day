@@ -7,14 +7,33 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"coffee-of-the-day/backend/internal/domain"
 	"coffee-of-the-day/backend/internal/service"
 )
+
+// mustSignTestToken은 테스트용 JWT 토큰을 생성한다.
+func mustSignTestToken(t *testing.T, userID, tokenType, secret string) string {
+	t.Helper()
+	claims := jwtClaims{
+		TokenType: tokenType,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(secret))
+	require.NoError(t, err)
+	return signed
+}
 
 // stubLogService는 테스트에서 LogService를 대체하는 스텁이다.
 type stubLogService struct {
@@ -348,9 +367,9 @@ func TestDeleteLog_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
-// --- UserIDMiddleware 테스트 ---
+// --- JWTMiddleware 테스트 ---
 
-func TestUserIDMiddleware_MissingHeader(t *testing.T) {
+func TestJWTMiddleware_MissingCookie(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -358,24 +377,49 @@ func TestUserIDMiddleware_MissingHeader(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 
-	UserIDMiddleware(next).ServeHTTP(w, r)
+	JWTMiddleware("test-secret")(next).ServeHTTP(w, r)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-func TestUserIDMiddleware_WithHeader(t *testing.T) {
+func TestJWTMiddleware_WithValidCookie(t *testing.T) {
+	const testSecret = "test-secret"
+	const testUserID = "user-1"
+
+	// 테스트용 액세스 토큰 생성
+	token := mustSignTestToken(t, testUserID, "access", testSecret)
+
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "user-1", getUserID(r))
+		assert.Equal(t, testUserID, getUserID(r))
 		w.WriteHeader(http.StatusOK)
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set("X-User-Id", "user-1")
+	r.AddCookie(&http.Cookie{Name: "access_token", Value: token})
 	w := httptest.NewRecorder()
 
-	UserIDMiddleware(next).ServeHTTP(w, r)
+	JWTMiddleware(testSecret)(next).ServeHTTP(w, r)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestJWTMiddleware_WithRefreshTokenRejected(t *testing.T) {
+	const testSecret = "test-secret"
+
+	// 리프레시 토큰을 액세스 토큰 자리에 사용하면 거부되어야 한다
+	token := mustSignTestToken(t, "user-1", "refresh", testSecret)
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("should not reach next handler")
+	})
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.AddCookie(&http.Cookie{Name: "access_token", Value: token})
+	w := httptest.NewRecorder()
+
+	JWTMiddleware(testSecret)(next).ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 // --- CORSMiddleware 테스트 ---

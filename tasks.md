@@ -189,18 +189,18 @@
 
 ### 4-1. DB 마이그레이션
 
-- [ ] `005_add_auth_to_users.up.sql` — `users` 테이블에 `email`, `password_hash` 컬럼 추가
-- [ ] `005_add_auth_to_users.down.sql`
+- [x] `005_add_auth_to_users.up.sql` — `users` 테이블에 `email`, `password_hash` 컬럼 추가
+- [x] `005_add_auth_to_users.down.sql`
 
 ### 4-2. Backend — 인증 API
 
-- [ ] `bcrypt` 의존성 추가
-- [ ] JWT 라이브러리 추가 (`golang-jwt/jwt`)
-- [ ] `POST /api/v1/auth/register` — 회원가입, 비밀번호 bcrypt 해싱
-- [ ] `POST /api/v1/auth/login` — 로그인, JWT 발급, httpOnly cookie 설정 (`SameSite=Strict`)
-- [ ] `POST /api/v1/auth/refresh` — 토큰 갱신
-- [ ] `POST /api/v1/auth/logout` — 쿠키 만료 처리
-- [ ] JWT 검증 미들웨어 (`X-User-Id` 헤더 미들웨어 교체)
+- [x] `bcrypt` 의존성 추가
+- [x] JWT 라이브러리 추가 (`golang-jwt/jwt`)
+- [x] `POST /api/v1/auth/register` — 회원가입, 비밀번호 bcrypt 해싱
+- [x] `POST /api/v1/auth/login` — 로그인, JWT 발급, httpOnly cookie 설정 (`SameSite=Strict`)
+- [x] `POST /api/v1/auth/refresh` — 토큰 갱신
+- [x] `POST /api/v1/auth/logout` — 쿠키 만료 처리
+- [x] JWT 검증 미들웨어 (`X-User-Id` 헤더 미들웨어 교체)
 
 ### 4-3. Frontend — 인증 UI
 

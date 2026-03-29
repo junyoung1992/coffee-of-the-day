@@ -51,8 +51,10 @@ type CoffeeLog struct {
 }
 
 type User struct {
-	ID          string `json:"id"`
-	Username    string `json:"username"`
-	DisplayName string `json:"display_name"`
-	CreatedAt   string `json:"created_at"`
+	ID           string  `json:"id"`
+	Username     string  `json:"username"`
+	DisplayName  string  `json:"display_name"`
+	CreatedAt    string  `json:"created_at"`
+	Email        *string `json:"email"`
+	PasswordHash *string `json:"password_hash"`
 }
