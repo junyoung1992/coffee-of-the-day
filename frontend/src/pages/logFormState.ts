@@ -58,14 +58,14 @@ export const roastLevelOptions = [
 ] as const
 
 export const brewMethodOptions = [
-  { label: 'Pour Over', value: 'pour_over' },
-  { label: 'Immersion', value: 'immersion' },
-  { label: 'AeroPress', value: 'aeropress' },
-  { label: 'Espresso', value: 'espresso' },
-  { label: 'Moka Pot', value: 'moka_pot' },
-  { label: 'Siphon', value: 'siphon' },
-  { label: 'Cold Brew', value: 'cold_brew' },
-  { label: 'Other', value: 'other' },
+  { label: 'Pour Over', description: '핸드드립 계열', value: 'pour_over' },
+  { label: 'Immersion', description: '침지 계열', value: 'immersion' },
+  { label: 'AeroPress', description: '압력 + 침지', value: 'aeropress' },
+  { label: 'Espresso', description: '고압 추출', value: 'espresso' },
+  { label: 'Moka Pot', description: '스토브탑 증기압', value: 'moka_pot' },
+  { label: 'Siphon', description: '진공 사이폰', value: 'siphon' },
+  { label: 'Cold Brew', description: '저온 장시간 침지', value: 'cold_brew' },
+  { label: 'Other', description: '기타', value: 'other' },
 ] as const
 
 function toDateTimeLocal(value: Date) {

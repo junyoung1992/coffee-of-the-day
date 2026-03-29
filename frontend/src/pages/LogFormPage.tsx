@@ -388,32 +388,74 @@ function BrewFieldsSection({
       error={fieldErrors['brew']}
     >
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Bean name" required error={fieldErrors['brew.bean_name']}>
+        {/* 원두 이름 */}
+        <div className="md:col-span-2">
+          <Field label="Bean name" required error={fieldErrors['brew.bean_name']}>
+            <input
+              className={inputClassName()}
+              value={form.brew.beanName}
+              onChange={(e) => setForm((prev) => updateBrewField(prev, 'beanName', e.target.value))}
+              required
+            />
+          </Field>
+        </div>
+
+        {/* 추출 방식 — 버튼 그룹 */}
+        <div className="md:col-span-2">
+          <Field label="Brew method" required error={fieldErrors['brew.brew_method']}>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {brewMethodOptions.map((option) => {
+                const selected = form.brew.brewMethod === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) =>
+                        updateBrewField(prev, 'brewMethod', option.value),
+                      )
+                    }
+                    className={[
+                      'rounded-2xl border px-3 py-2.5 text-left transition',
+                      selected
+                        ? 'border-amber-900 bg-amber-900 shadow-[0_8px_24px_rgba(123,79,34,0.18)]'
+                        : 'border-amber-950/10 bg-white hover:border-amber-900/25 hover:bg-amber-50/60',
+                    ].join(' ')}
+                  >
+                    <p className={`text-sm font-semibold ${selected ? 'text-white' : 'text-stone-800'}`}>
+                      {option.label}
+                    </p>
+                    <p className={`mt-0.5 text-xs ${selected ? 'text-white/75' : 'text-stone-500'}`}>
+                      {option.description}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+          </Field>
+        </div>
+
+        {/* 구체적인 도구명 — brew_method와 인접 배치 */}
+        <Field label="Brew device">
           <input
             className={inputClassName()}
-            value={form.brew.beanName}
-            onChange={(e) => setForm((prev) => updateBrewField(prev, 'beanName', e.target.value))}
-            required
+            value={form.brew.brewDevice}
+            onChange={(e) =>
+              setForm((prev) => updateBrewField(prev, 'brewDevice', e.target.value))
+            }
+            placeholder="Origami, AeroPress Go, Breville..."
           />
         </Field>
-        <Field label="Brew method" required error={fieldErrors['brew.brew_method']}>
-          <select
+        <Field label="Grind size">
+          <input
             className={inputClassName()}
-            value={form.brew.brewMethod}
-            onChange={(e) =>
-              setForm((prev) =>
-                updateBrewField(prev, 'brewMethod', e.target.value as LogFormState['brew']['brewMethod']),
-              )
-            }
-            required
-          >
-            {brewMethodOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            value={form.brew.grindSize}
+            onChange={(e) => setForm((prev) => updateBrewField(prev, 'grindSize', e.target.value))}
+            placeholder="중간, 20 clicks"
+          />
         </Field>
+
+        {/* 원두 정보 */}
         <Field label="Bean origin">
           <input
             className={inputClassName()}
@@ -455,77 +497,79 @@ function BrewFieldsSection({
             onChange={(e) => setForm((prev) => updateBrewField(prev, 'roastDate', e.target.value))}
           />
         </Field>
-        <Field label="Brew device">
-          <input
-            className={inputClassName()}
-            value={form.brew.brewDevice}
-            onChange={(e) =>
-              setForm((prev) => updateBrewField(prev, 'brewDevice', e.target.value))
-            }
-            placeholder="Origami, AeroPress Go"
-          />
-        </Field>
-        <Field label="Grind size">
-          <input
-            className={inputClassName()}
-            value={form.brew.grindSize}
-            onChange={(e) => setForm((prev) => updateBrewField(prev, 'grindSize', e.target.value))}
-            placeholder="중간, 20 clicks"
-          />
-        </Field>
-        <Field label="Coffee amount (g)" error={fieldErrors['brew.coffee_amount_g']}>
-          <input
-            className={inputClassName()}
-            type="number"
-            min="0"
-            step="0.1"
-            value={form.brew.coffeeAmountG}
-            onChange={(e) =>
-              setForm((prev) => updateBrewField(prev, 'coffeeAmountG', e.target.value))
-            }
-          />
-        </Field>
-        <Field label="Water amount (ml)" error={fieldErrors['brew.water_amount_ml']}>
-          <input
-            className={inputClassName()}
-            type="number"
-            min="0"
-            step="0.1"
-            value={form.brew.waterAmountMl}
-            onChange={(e) =>
-              setForm((prev) => updateBrewField(prev, 'waterAmountMl', e.target.value))
-            }
-          />
-        </Field>
-        <Field label="Water temperature (C)" error={fieldErrors['brew.water_temp_c']}>
-          <input
-            className={inputClassName()}
-            type="number"
-            min="0"
-            step="0.1"
-            value={form.brew.waterTempC}
-            onChange={(e) =>
-              setForm((prev) => updateBrewField(prev, 'waterTempC', e.target.value))
-            }
-          />
-        </Field>
-        <Field label="Brew time (sec)" error={fieldErrors['brew.brew_time_sec']}>
-          <input
-            className={inputClassName()}
-            type="number"
-            min="0"
-            step="1"
-            value={form.brew.brewTimeSec}
-            onChange={(e) =>
-              setForm((prev) => updateBrewField(prev, 'brewTimeSec', e.target.value))
-            }
-          />
-        </Field>
-        <div className="md:col-span-2 rounded-[1.5rem] border border-dashed border-amber-900/20 bg-white/70 px-4 py-4">
-          <p className="text-sm font-semibold text-stone-900">Recipe ratio</p>
-          <p className="mt-2 text-sm text-stone-600">
-            {ratio ? `1:${ratio}` : '원두량과 물량을 입력하면 비율이 계산됩니다.'}
-          </p>
+
+        {/* 레시피 — 원두량:물량 비율 인라인 표시 */}
+        <div className="md:col-span-2 rounded-[1.75rem] border border-amber-950/10 bg-white p-4 space-y-4">
+          <p className="text-sm font-semibold text-stone-900">Recipe</p>
+
+          {/* 원두량 — 비율 — 물량 인라인 레이아웃 */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+            <Field label="Coffee (g)" error={fieldErrors['brew.coffee_amount_g']}>
+              <input
+                className={inputClassName()}
+                type="number"
+                min="0"
+                step="0.1"
+                value={form.brew.coffeeAmountG}
+                onChange={(e) =>
+                  setForm((prev) => updateBrewField(prev, 'coffeeAmountG', e.target.value))
+                }
+              />
+            </Field>
+
+            {/* 비율 표시 — 두 입력 필드 사이에 실시간으로 렌더링 */}
+            <div className="flex flex-col items-center gap-1 pb-1">
+              <span className="text-xs text-stone-400">ratio</span>
+              <span
+                className={`text-base font-bold tabular-nums transition-colors ${
+                  ratio ? 'text-amber-900' : 'text-stone-300'
+                }`}
+              >
+                {ratio ? `1 : ${ratio}` : '1 : —'}
+              </span>
+            </div>
+
+            <Field label="Water (ml)" error={fieldErrors['brew.water_amount_ml']}>
+              <input
+                className={inputClassName()}
+                type="number"
+                min="0"
+                step="0.1"
+                value={form.brew.waterAmountMl}
+                onChange={(e) =>
+                  setForm((prev) => updateBrewField(prev, 'waterAmountMl', e.target.value))
+                }
+              />
+            </Field>
+          </div>
+
+          {/* 온도, 시간 */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Water temperature (°C)" error={fieldErrors['brew.water_temp_c']}>
+              <input
+                className={inputClassName()}
+                type="number"
+                min="0"
+                step="0.1"
+                value={form.brew.waterTempC}
+                onChange={(e) =>
+                  setForm((prev) => updateBrewField(prev, 'waterTempC', e.target.value))
+                }
+              />
+            </Field>
+            <Field label="Brew time (sec)" error={fieldErrors['brew.brew_time_sec']}>
+              <input
+                className={inputClassName()}
+                type="number"
+                min="0"
+                step="1"
+                value={form.brew.brewTimeSec}
+                onChange={(e) =>
+                  setForm((prev) => updateBrewField(prev, 'brewTimeSec', e.target.value))
+                }
+              />
+            </Field>
+          </div>
         </div>
         <div className="md:col-span-2">
           <Field label="Tasting tags">
