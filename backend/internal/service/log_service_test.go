@@ -324,3 +324,57 @@ func TestValidationError_UnwrapsToInvalidArgument(t *testing.T) {
 	err := newValidationError("field", "문제")
 	assert.True(t, errors.Is(err, ErrInvalidArgument))
 }
+
+func TestValidateDateFilter_YYYYMMDDNormalization(t *testing.T) {
+	t.Run("date_from은 당일 00:00:00Z로 정규화된다", func(t *testing.T) {
+		s, parsed, err := validateDateFilter("date_from", "2026-03-29", false)
+		require.NoError(t, err)
+		assert.Equal(t, "2026-03-29T00:00:00Z", s)
+		assert.Equal(t, time.Date(2026, 3, 29, 0, 0, 0, 0, time.UTC), parsed)
+	})
+
+	t.Run("date_to는 당일 23:59:59Z로 정규화된다", func(t *testing.T) {
+		s, parsed, err := validateDateFilter("date_to", "2026-03-29", true)
+		require.NoError(t, err)
+		assert.Equal(t, "2026-03-29T23:59:59Z", s)
+		assert.Equal(t, time.Date(2026, 3, 29, 23, 59, 59, 0, time.UTC), parsed)
+	})
+
+	t.Run("RFC3339 입력은 그대로 통과한다", func(t *testing.T) {
+		s, _, err := validateDateFilter("date_from", "2026-03-29T09:00:00Z", false)
+		require.NoError(t, err)
+		assert.Equal(t, "2026-03-29T09:00:00Z", s)
+	})
+
+	t.Run("잘못된 형식은 검증 에러를 반환한다", func(t *testing.T) {
+		_, _, err := validateDateFilter("date_from", "29/03/2026", false)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidArgument)
+	})
+}
+
+func TestListLogs_DateFilterNormalizesYYYYMMDD(t *testing.T) {
+	var capturedFilter repository.ListFilter
+	repo := &stubLogRepository{
+		listFunc: func(ctx context.Context, userID string, filter repository.ListFilter) ([]domain.CoffeeLogFull, error) {
+			capturedFilter = filter
+			return nil, nil
+		},
+	}
+	svc := newTestService(repo)
+
+	from := "2026-03-01"
+	to := "2026-03-29"
+	_, err := svc.ListLogs(context.Background(), "user-1", ListLogsFilter{
+		DateFrom: &from,
+		DateTo:   &to,
+		Limit:    10,
+	})
+
+	require.NoError(t, err)
+	// YYYY-MM-DD 입력이 SQL 비교에 사용할 RFC3339 경계값으로 정규화되었는지 확인
+	require.NotNil(t, capturedFilter.DateFrom)
+	require.NotNil(t, capturedFilter.DateTo)
+	assert.Equal(t, "2026-03-01T00:00:00Z", *capturedFilter.DateFrom)
+	assert.Equal(t, "2026-03-29T23:59:59Z", *capturedFilter.DateTo)
+}

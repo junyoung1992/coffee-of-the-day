@@ -374,7 +374,7 @@ func normalizeListFilter(filter ListLogsFilter) (repository.ListFilter, int, err
 
 	var fromTime time.Time
 	if filter.DateFrom != nil {
-		validated, parsed, err := validateDateFilter("date_from", *filter.DateFrom)
+		validated, parsed, err := validateDateFilter("date_from", *filter.DateFrom, false)
 		if err != nil {
 			return repository.ListFilter{}, 0, err
 		}
@@ -384,7 +384,7 @@ func normalizeListFilter(filter ListLogsFilter) (repository.ListFilter, int, err
 
 	var toTime time.Time
 	if filter.DateTo != nil {
-		validated, parsed, err := validateDateFilter("date_to", *filter.DateTo)
+		validated, parsed, err := validateDateFilter("date_to", *filter.DateTo, true)
 		if err != nil {
 			return repository.ListFilter{}, 0, err
 		}
@@ -587,10 +587,26 @@ func validateRecordedAt(value string) (string, error) {
 	return trimmed, nil
 }
 
-func validateDateFilter(field, value string) (string, time.Time, error) {
+// validateDateFilter는 날짜 필터 값을 검증하고 RFC3339 문자열로 정규화한다.
+// endOfDay=true이면 YYYY-MM-DD 입력을 당일 23:59:59Z로, false이면 00:00:00Z로 확장한다.
+// SQL 비교(recorded_at >= ?, recorded_at <= ?)가 RFC3339 문자열 간 비교이므로
+// date_to에 반드시 end-of-day 정규화가 필요하다.
+func validateDateFilter(field, value string, endOfDay bool) (string, time.Time, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
 		return "", time.Time{}, newValidationError(field, "빈 값일 수 없습니다")
+	}
+
+	// YYYY-MM-DD 형식인 경우 하루의 시작 또는 끝 시각으로 정규화한다
+	if d, err := time.Parse("2006-01-02", trimmed); err == nil {
+		var normalized time.Time
+		if endOfDay {
+			normalized = time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, 0, time.UTC)
+		} else {
+			normalized = time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
+		}
+		s := normalized.Format(time.RFC3339)
+		return s, normalized, nil
 	}
 
 	parsed, _, err := parseDateTime(trimmed)
@@ -700,7 +716,7 @@ func cloneInt(value *int) *int {
 }
 
 // parseDateTime은 RFC3339 형식만 허용한다.
-// 프론트엔드는 datetime-local 입력을 ISO 문자열로 직렬화하므로 date-only는 지원하지 않는다.
+// YYYY-MM-DD 형식은 validateDateFilter에서 정규화 후 처리한다.
 func parseDateTime(value string) (time.Time, string, error) {
 	for _, layout := range []string{time.RFC3339Nano, time.RFC3339} {
 		parsed, err := time.Parse(layout, value)
