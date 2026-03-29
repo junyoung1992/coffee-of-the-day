@@ -84,6 +84,20 @@ paths:
         '204':
           description: 로그아웃 성공 (토큰 쿠키 만료 처리)
 
+  /api/v1/auth/me:
+    get:
+      summary: 현재 로그인된 사용자 정보 조회
+      tags: [auth]
+      responses:
+        '200':
+          description: 사용자 정보
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/v1/logs:
     post:
       summary: 커피 기록 생성

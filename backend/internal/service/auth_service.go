@@ -36,6 +36,7 @@ type AuthService interface {
 	Register(ctx context.Context, req domain.RegisterRequest) (domain.AuthUser, AuthTokens, error)
 	Login(ctx context.Context, req domain.LoginRequest) (domain.AuthUser, AuthTokens, error)
 	Refresh(ctx context.Context, refreshToken string) (AuthTokens, error)
+	GetUser(ctx context.Context, userID string) (domain.AuthUser, error)
 }
 
 // tokenClaims는 JWT 페이로드 구조다.
@@ -214,6 +215,15 @@ func validateRegisterRequest(req domain.RegisterRequest) error {
 		return &ValidationError{Field: "username", Message: "사용자명이 필요합니다"}
 	}
 	return nil
+}
+
+// GetUser는 userID로 사용자 정보를 조회한다. /auth/me 엔드포인트에서 사용한다.
+func (s *DefaultAuthService) GetUser(ctx context.Context, userID string) (domain.AuthUser, error) {
+	rec, err := s.repo.GetUserByID(ctx, userID)
+	if err != nil {
+		return domain.AuthUser{}, err
+	}
+	return recordToAuthUser(rec), nil
 }
 
 func recordToAuthUser(rec repository.UserRecord) domain.AuthUser {

@@ -4,6 +4,198 @@
  */
 
 export interface paths {
+    "/api/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 회원가입 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RegisterRequest"];
+                };
+            };
+            responses: {
+                /** @description 회원가입 성공 (액세스/리프레시 토큰 쿠키 설정) */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                409: components["responses"]["Conflict"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 로그인 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LoginRequest"];
+                };
+            };
+            responses: {
+                /** @description 로그인 성공 (액세스/리프레시 토큰 쿠키 설정) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 액세스 토큰 갱신
+         * @description 리프레시 토큰 쿠키를 사용하여 새 토큰 쌍을 발급한다.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 갱신 성공 (새 토큰 쿠키 설정) */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 로그아웃 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 로그아웃 성공 (토큰 쿠키 만료 처리) */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 현재 로그인된 사용자 정보 조회 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 사용자 정보 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserResponse"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/logs": {
         parameters: {
             query?: never;
@@ -26,10 +218,7 @@ export interface paths {
                     /** @description 페이지당 항목 수 */
                     limit?: number;
                 };
-                header: {
-                    /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
-                    "X-User-Id": components["parameters"]["XUserId"];
-                };
+                header?: never;
                 path?: never;
                 cookie?: never;
             };
@@ -53,10 +242,7 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header: {
-                    /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
-                    "X-User-Id": components["parameters"]["XUserId"];
-                };
+                header?: never;
                 path?: never;
                 cookie?: never;
             };
@@ -96,10 +282,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: never;
-                header: {
-                    /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
-                    "X-User-Id": components["parameters"]["XUserId"];
-                };
+                header?: never;
                 path: {
                     /** @description 커피 기록 ID */
                     id: components["parameters"]["LogId"];
@@ -125,10 +308,7 @@ export interface paths {
         put: {
             parameters: {
                 query?: never;
-                header: {
-                    /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
-                    "X-User-Id": components["parameters"]["XUserId"];
-                };
+                header?: never;
                 path: {
                     /** @description 커피 기록 ID */
                     id: components["parameters"]["LogId"];
@@ -160,10 +340,7 @@ export interface paths {
         delete: {
             parameters: {
                 query?: never;
-                header: {
-                    /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
-                    "X-User-Id": components["parameters"]["XUserId"];
-                };
+                header?: never;
                 path: {
                     /** @description 커피 기록 ID */
                     id: components["parameters"]["LogId"];
@@ -202,10 +379,7 @@ export interface paths {
                     /** @description 검색어 (빈 문자열이면 전체 반환) */
                     q?: string;
                 };
-                header: {
-                    /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
-                    "X-User-Id": components["parameters"]["XUserId"];
-                };
+                header?: never;
                 path?: never;
                 cookie?: never;
             };
@@ -220,7 +394,6 @@ export interface paths {
                         "application/json": components["schemas"]["SuggestionsResponse"];
                     };
                 };
-                400: components["responses"]["BadRequest"];
                 401: components["responses"]["Unauthorized"];
             };
         };
@@ -246,10 +419,7 @@ export interface paths {
                     /** @description 검색어 (빈 문자열이면 전체 반환) */
                     q?: string;
                 };
-                header: {
-                    /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
-                    "X-User-Id": components["parameters"]["XUserId"];
-                };
+                header?: never;
                 path?: never;
                 cookie?: never;
             };
@@ -264,7 +434,6 @@ export interface paths {
                         "application/json": components["schemas"]["SuggestionsResponse"];
                     };
                 };
-                400: components["responses"]["BadRequest"];
                 401: components["responses"]["Unauthorized"];
             };
         };
@@ -280,6 +449,38 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        RegisterRequest: {
+            /**
+             * Format: email
+             * @example user@example.com
+             */
+            email: string;
+            /** @example mypassword123 */
+            password: string;
+            /** @example coffeelover */
+            username: string;
+            /**
+             * @description 생략 시 username으로 대체
+             * @example 커피러버
+             */
+            display_name?: string;
+        };
+        LoginRequest: {
+            /**
+             * Format: email
+             * @example user@example.com
+             */
+            email: string;
+            /** @example mypassword123 */
+            password: string;
+        };
+        UserResponse: {
+            id: string;
+            /** Format: email */
+            email: string;
+            username: string;
+            display_name: string;
+        };
         /**
          * @description cafe = 바리스타가 추출, brew = 내가 직접 추출
          * @enum {string}
@@ -381,11 +582,11 @@ export interface components {
             suggestions: string[];
         };
         ErrorResponse: {
-            /** @example X-User-Id 헤더가 필요합니다 */
+            /** @example 이메일 또는 비밀번호가 올바르지 않습니다 */
             error?: string;
             /**
-             * @description ValidationError일 때만 포함. 오류가 발생한 필드 경로 (예: cafe.cafe_name)
-             * @example cafe.cafe_name
+             * @description ValidationError일 때만 포함. 오류가 발생한 필드 경로 (예: email)
+             * @example email
              */
             field?: string;
         };
@@ -400,7 +601,7 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
-        /** @description X-User-Id 헤더 누락 */
+        /** @description 인증 실패 (토큰 없음 또는 만료) */
         Unauthorized: {
             headers: {
                 [name: string]: unknown;
@@ -418,10 +619,17 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
+        /** @description 이미 사용 중인 이메일 */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
     };
     parameters: {
-        /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
-        XUserId: string;
         /** @description 커피 기록 ID */
         LogId: string;
     };

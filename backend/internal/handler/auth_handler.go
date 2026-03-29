@@ -104,6 +104,18 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Me는 GET /api/v1/auth/me를 처리한다.
+// JWT 미들웨어를 통과한 요청에서 현재 로그인된 사용자 정보를 반환한다.
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	userID := getUserID(r)
+	user, err := h.svc.GetUser(r.Context(), userID)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "사용자를 찾을 수 없습니다")
+		return
+	}
+	writeJSON(w, http.StatusOK, toAuthUserResponse(user))
+}
+
 // Logout은 POST /api/v1/auth/logout을 처리한다.
 // 쿠키를 만료시켜 클라이언트 측 토큰을 무효화한다.
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {

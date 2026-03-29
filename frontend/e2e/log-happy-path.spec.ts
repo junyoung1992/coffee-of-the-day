@@ -1,10 +1,22 @@
 import { expect, test } from '@playwright/test'
 
+// E2E 테스트는 매 실행마다 새 DB를 사용하므로 테스트 전에 사용자를 등록해야 한다.
+const E2E_EMAIL = 'e2e@example.com'
+const E2E_PASSWORD = 'e2epassword123'
+const E2E_USERNAME = 'e2euser'
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/register')
+  await page.getByLabel('Email').fill(E2E_EMAIL)
+  await page.getByLabel('Password').fill(E2E_PASSWORD)
+  await page.getByLabel('Username').fill(E2E_USERNAME)
+  await page.getByRole('button', { name: '회원가입' }).click()
+  await expect(page).toHaveURL('/')
+})
+
 test('brew happy-path CRUD flow works end-to-end', async ({ page }) => {
   const beanName = `E2E Brew Bean ${Date.now()}`
   const updatedBeanName = `${beanName} Updated`
-
-  await page.goto('/')
 
   await page.getByRole('link', { name: '오늘의 기록 추가' }).click()
   await expect(page).toHaveURL('/logs/new')
@@ -58,4 +70,13 @@ test('brew happy-path CRUD flow works end-to-end', async ({ page }) => {
 
   await expect(page).toHaveURL('/')
   await expect(page.getByRole('link', { name: new RegExp(updatedBeanName) })).toHaveCount(0)
+})
+
+test('logout redirects to login page', async ({ page }) => {
+  await page.getByRole('button', { name: '로그아웃' }).click()
+  await expect(page).toHaveURL('/login')
+
+  // 로그아웃 후 홈에 접근하면 로그인 페이지로 리다이렉트된다
+  await page.goto('/')
+  await expect(page).toHaveURL('/login')
 })

@@ -204,17 +204,17 @@
 
 ### 4-3. Frontend — 인증 UI
 
-- [ ] `src/types/auth.ts` — `User`, `LoginRequest`, `RegisterRequest` 타입
-- [ ] `src/api/auth.ts` — `login`, `register`, `logout`, `refresh`
-- [ ] `src/hooks/useAuth.ts` — 인증 상태 관리
-- [ ] `src/pages/LoginPage.tsx`
-- [ ] `src/pages/RegisterPage.tsx`
-- [ ] 미인증 시 로그인 페이지로 리다이렉트 (Protected Route)
-- [ ] `X-User-Id` 헤더 방식 제거, 쿠키 기반으로 전환
+- [x] `src/types/auth.ts` — `User`, `LoginRequest`, `RegisterRequest` 타입
+- [x] `src/api/auth.ts` — `login`, `register`, `logout`, `refresh`
+- [x] `src/hooks/useAuth.ts` — 인증 상태 관리
+- [x] `src/pages/LoginPage.tsx`
+- [x] `src/pages/RegisterPage.tsx`
+- [x] 미인증 시 로그인 페이지로 리다이렉트 (Protected Route)
+- [x] `X-User-Id` 헤더 방식 제거, 쿠키 기반으로 전환
 
 **Phase 4 완료 기준**
-- [ ] 회원가입 후 로그인하여 본인 기록만 조회·수정·삭제 가능
-- [ ] 로그아웃 후 기록에 접근 불가
+- [x] 회원가입 후 로그인하여 본인 기록만 조회·수정·삭제 가능
+- [x] 로그아웃 후 기록에 접근 불가
 
 ---
 

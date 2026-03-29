@@ -67,11 +67,14 @@ func main() {
 			r.Post("/login", authHandler.Login)
 			r.Post("/refresh", authHandler.Refresh)
 			r.Post("/logout", authHandler.Logout)
+			// /me는 JWT가 필요하므로 인증 그룹에서 별도로 등록한다
 		})
 
 		// 인증 필요 라우트: JWT 쿠키 검증 미들웨어 적용
 		r.Group(func(r chi.Router) {
 			r.Use(handler.JWTMiddleware(cfg.JWTSecret))
+
+			r.Get("/auth/me", authHandler.Me)
 
 			r.Route("/logs", func(r chi.Router) {
 				r.Post("/", logHandler.CreateLog)

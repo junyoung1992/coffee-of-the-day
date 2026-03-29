@@ -26,7 +26,6 @@ export default defineConfig({
         ...process.env,
         PORT: '18080',
         DB_PATH: e2eDBPath,
-        POC_SEED_USER_ID: 'dev-user',
       },
       url: 'http://127.0.0.1:18080/health',
       reuseExistingServer: false,
