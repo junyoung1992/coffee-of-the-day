@@ -88,7 +88,7 @@ func TestCreateLog_ValidCafe_PersistsNormalizedLog(t *testing.T) {
 	origin := "  Ethiopia  "
 	rating := 4.5
 	req := CreateLogRequest{
-		RecordedAt: " 2026-03-29 ",
+		RecordedAt: " 2026-03-29T09:00:00Z ",
 		Companions: []string{" Alice ", "", " Bob "},
 		LogType:    domain.LogTypeCafe,
 		Memo:       &memo,
@@ -110,7 +110,7 @@ func TestCreateLog_ValidCafe_PersistsNormalizedLog(t *testing.T) {
 	assert.Equal(t, got, saved)
 	assert.Equal(t, "generated-id", got.ID)
 	assert.Equal(t, "user-1", got.UserID)
-	assert.Equal(t, "2026-03-29", got.RecordedAt)
+	assert.Equal(t, "2026-03-29T09:00:00Z", got.RecordedAt)
 	assert.Equal(t, []string{"Alice", "Bob"}, got.Companions)
 	assert.Equal(t, "2026-03-29T12:34:56Z", got.CreatedAt)
 	assert.Equal(t, "2026-03-29T12:34:56Z", got.UpdatedAt)
@@ -127,7 +127,7 @@ func TestCreateLog_InvalidDetailCombination_ReturnsValidationError(t *testing.T)
 	svc := newTestService(repo)
 
 	_, err := svc.CreateLog(context.Background(), "user-1", CreateLogRequest{
-		RecordedAt: "2026-03-29",
+		RecordedAt: "2026-03-29T09:00:00Z",
 		LogType:    domain.LogTypeBrew,
 	})
 
@@ -273,7 +273,7 @@ func TestUpdateLog_RejectsLogTypeChange(t *testing.T) {
 	svc := newTestService(repo)
 
 	_, err := svc.UpdateLog(context.Background(), "user-1", "log-1", UpdateLogRequest{
-		RecordedAt: "2026-03-29",
+		RecordedAt: "2026-03-29T09:00:00Z",
 		LogType:    domain.LogTypeBrew,
 		Brew: &domain.BrewDetail{
 			BeanName:   "원두",

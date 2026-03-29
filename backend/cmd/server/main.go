@@ -22,7 +22,9 @@ import (
 func main() {
 	cfg := config.Load()
 
-	db, err := sql.Open("sqlite3", cfg.DBPath)
+	// _foreign_keys=on: SQLite는 연결마다 외래키 강제를 별도로 활성화해야 한다.
+	// DSN 수준에서 설정하면 connection pool의 모든 연결에 일괄 적용된다.
+	db, err := sql.Open("sqlite3", cfg.DBPath+"?_foreign_keys=on")
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}

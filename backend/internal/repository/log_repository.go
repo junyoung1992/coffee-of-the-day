@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"coffee-of-the-day/backend/internal/db"
 	"coffee-of-the-day/backend/internal/domain"
@@ -185,9 +186,44 @@ func (r *SQLiteLogRepository) ListLogs(ctx context.Context, userID string, filte
 		return nil, fmt.Errorf("list logs: rows: %w", err)
 	}
 
+	if len(items) == 0 {
+		return items, nil
+	}
+
+	// 목록 조회 후 타입별로 ID를 분리하여 한 번에 상세 조회한다 (N+1 방지)
+	var cafeIDs, brewIDs []string
+	for _, item := range items {
+		switch item.LogType {
+		case domain.LogTypeCafe:
+			cafeIDs = append(cafeIDs, item.ID)
+		case domain.LogTypeBrew:
+			brewIDs = append(brewIDs, item.ID)
+		}
+	}
+
+	cafeMap, err := r.batchLoadCafe(ctx, cafeIDs)
+	if err != nil {
+		return nil, fmt.Errorf("list logs: batch load cafe: %w", err)
+	}
+	brewMap, err := r.batchLoadBrew(ctx, brewIDs)
+	if err != nil {
+		return nil, fmt.Errorf("list logs: batch load brew: %w", err)
+	}
+
 	for i := range items {
-		if err := r.loadDetail(ctx, &items[i]); err != nil {
-			return nil, fmt.Errorf("list logs: load detail: %w", err)
+		switch items[i].LogType {
+		case domain.LogTypeCafe:
+			detail, ok := cafeMap[items[i].ID]
+			if !ok {
+				return nil, fmt.Errorf("list logs: cafe detail missing for log %s: %w", items[i].ID, ErrNotFound)
+			}
+			items[i].Cafe = detail
+		case domain.LogTypeBrew:
+			detail, ok := brewMap[items[i].ID]
+			if !ok {
+				return nil, fmt.Errorf("list logs: brew detail missing for log %s: %w", items[i].ID, ErrNotFound)
+			}
+			items[i].Brew = detail
 		}
 	}
 
@@ -281,15 +317,14 @@ func (r *SQLiteLogRepository) DeleteLog(ctx context.Context, logID, userID strin
 }
 
 // loadDetail은 로그 타입에 따라 상세 테이블에서 데이터를 조회하여 채운다.
-// 상세 데이터가 없는 경우(ErrNoRows)는 정상으로 처리한다 —
-// 공통 로그는 존재하지만 상세가 아직 없는 상태를 허용하기 위함.
+// cafe/brew 로그에서 상세 레코드가 없으면 데이터 손상으로 간주하고 에러를 반환한다.
 func (r *SQLiteLogRepository) loadDetail(ctx context.Context, f *domain.CoffeeLogFull) error {
 	switch f.LogType {
 	case domain.LogTypeCafe:
 		row, err := r.queries.GetCafeLogByLogID(ctx, f.ID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return nil
+				return fmt.Errorf("cafe detail missing for log %s: %w", f.ID, ErrNotFound)
 			}
 			return err
 		}
@@ -309,7 +344,7 @@ func (r *SQLiteLogRepository) loadDetail(ctx context.Context, f *domain.CoffeeLo
 		row, err := r.queries.GetBrewLogByLogID(ctx, f.ID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return nil
+				return fmt.Errorf("brew detail missing for log %s: %w", f.ID, ErrNotFound)
 			}
 			return err
 		}
@@ -334,6 +369,107 @@ func (r *SQLiteLogRepository) loadDetail(ctx context.Context, f *domain.CoffeeLo
 		}
 	}
 	return nil
+}
+
+// batchLoadCafe는 주어진 log ID 목록에 대한 카페 상세를 단일 IN 쿼리로 조회한다.
+func (r *SQLiteLogRepository) batchLoadCafe(ctx context.Context, ids []string) (map[string]*domain.CafeDetail, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.Repeat("?,", len(ids))
+	placeholders = placeholders[:len(placeholders)-1]
+	query := fmt.Sprintf(
+		`SELECT log_id, cafe_name, location, coffee_name, bean_origin, bean_process, roast_level, tasting_tags, tasting_note, impressions, rating FROM cafe_logs WHERE log_id IN (%s)`,
+		placeholders,
+	)
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := r.sqlDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make(map[string]*domain.CafeDetail, len(ids))
+	for rows.Next() {
+		var row db.CafeLog
+		if err := rows.Scan(
+			&row.LogID, &row.CafeName, &row.Location, &row.CoffeeName,
+			&row.BeanOrigin, &row.BeanProcess, &row.RoastLevel, &row.TastingTags,
+			&row.TastingNote, &row.Impressions, &row.Rating,
+		); err != nil {
+			return nil, err
+		}
+		result[row.LogID] = &domain.CafeDetail{
+			CafeName:    row.CafeName,
+			Location:    row.Location,
+			CoffeeName:  row.CoffeeName,
+			BeanOrigin:  row.BeanOrigin,
+			BeanProcess: row.BeanProcess,
+			RoastLevel:  strToRoast(row.RoastLevel),
+			TastingTags: domain.JSONToStrings(row.TastingTags),
+			TastingNote: row.TastingNote,
+			Impressions: row.Impressions,
+			Rating:      row.Rating,
+		}
+	}
+	return result, rows.Err()
+}
+
+// batchLoadBrew는 주어진 log ID 목록에 대한 브루 상세를 단일 IN 쿼리로 조회한다.
+func (r *SQLiteLogRepository) batchLoadBrew(ctx context.Context, ids []string) (map[string]*domain.BrewDetail, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.Repeat("?,", len(ids))
+	placeholders = placeholders[:len(placeholders)-1]
+	query := fmt.Sprintf(
+		`SELECT log_id, bean_name, bean_origin, bean_process, roast_level, roast_date, tasting_tags, tasting_note, brew_method, brew_device, coffee_amount_g, water_amount_ml, water_temp_c, brew_time_sec, grind_size, brew_steps, impressions, rating FROM brew_logs WHERE log_id IN (%s)`,
+		placeholders,
+	)
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := r.sqlDB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := make(map[string]*domain.BrewDetail, len(ids))
+	for rows.Next() {
+		var row db.BrewLog
+		if err := rows.Scan(
+			&row.LogID, &row.BeanName, &row.BeanOrigin, &row.BeanProcess,
+			&row.RoastLevel, &row.RoastDate, &row.TastingTags, &row.TastingNote,
+			&row.BrewMethod, &row.BrewDevice, &row.CoffeeAmountG, &row.WaterAmountMl,
+			&row.WaterTempC, &row.BrewTimeSec, &row.GrindSize, &row.BrewSteps,
+			&row.Impressions, &row.Rating,
+		); err != nil {
+			return nil, err
+		}
+		result[row.LogID] = &domain.BrewDetail{
+			BeanName:      row.BeanName,
+			BeanOrigin:    row.BeanOrigin,
+			BeanProcess:   row.BeanProcess,
+			RoastLevel:    strToRoast(row.RoastLevel),
+			RoastDate:     row.RoastDate,
+			TastingTags:   domain.JSONToStrings(row.TastingTags),
+			TastingNote:   row.TastingNote,
+			BrewMethod:    domain.BrewMethod(row.BrewMethod),
+			BrewDevice:    row.BrewDevice,
+			CoffeeAmountG: row.CoffeeAmountG,
+			WaterAmountMl: row.WaterAmountMl,
+			WaterTempC:    row.WaterTempC,
+			BrewTimeSec:   int64ToInt(row.BrewTimeSec),
+			GrindSize:     row.GrindSize,
+			BrewSteps:     domain.JSONToStrings(row.BrewSteps),
+			Impressions:   row.Impressions,
+			Rating:        row.Rating,
+		}
+	}
+	return result, rows.Err()
 }
 
 func coffeeLogToFull(row db.CoffeeLog) domain.CoffeeLogFull {

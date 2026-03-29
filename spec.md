@@ -273,8 +273,8 @@ frontend/
 
 ### 공통
 
-- 날짜 형식: ISO 8601 (`2024-03-28T14:30:00+09:00`)
-- 에러 응답: `{ "error": { "code": string, "message": string } }`
+- 날짜 형식: RFC3339 datetime (`2024-03-28T14:30:00+09:00`). date-only(`YYYY-MM-DD`)는 허용하지 않는다.
+- 에러 응답: `{ "error": string, "field"?: string }` — `field`는 ValidationError일 때만 포함되며 오류가 발생한 필드 경로를 나타낸다 (예: `"cafe.cafe_name"`)
 - 인증 헤더 (POC): `X-User-Id: <uuid>`
 
 ### 엔드포인트
@@ -384,4 +384,4 @@ GET    /api/v1/suggestions/companions?q=<검색어>
 
 ---
 
-*Last updated: 2026-03-28 (v0.3 — home_brew → brew 개념 정립, rating 0.5단위, tasting_tags 자동완성 추가)*
+*Last updated: 2026-03-29 (v0.4 — 에러 응답 형식 실제 구현 반영, recorded_at RFC3339 datetime-only 확정)*

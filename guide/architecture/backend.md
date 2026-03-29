@@ -59,6 +59,21 @@ func UserIDMiddleware(next http.Handler) http.Handler {
 
 POC에서 단일 사용자 / 로컬 실행이라는 전제 조건에서 SQLite는 "설정 없이 바로 시작"할 수 있는 최선의 선택입니다. 이후 사용자가 늘어나거나 서버 배포가 필요해지면 PostgreSQL로 교체합니다.
 
+**SQLite의 외래키 비활성화 기본값**
+
+SQLite는 연결을 열어도 외래키 강제가 기본으로 꺼져 있습니다. `PRAGMA foreign_keys = ON`을 명시적으로 실행하지 않으면 스키마에 `REFERENCES`와 `ON DELETE CASCADE`를 선언해도 아무 효과가 없습니다.
+
+이 프로젝트에서는 DSN 수준에서 활성화합니다.
+
+```go
+// connection pool의 모든 연결에 일괄 적용된다
+db, err := sql.Open("sqlite3", cfg.DBPath+"?_foreign_keys=on")
+```
+
+코드로 `PRAGMA foreign_keys = ON`을 직접 실행하면 pool에서 해당 연결 하나에만 적용되어 다른 연결에서는 여전히 꺼진 상태가 될 수 있습니다. DSN 파라미터 방식이 안전합니다.
+
+PostgreSQL로 교체하면 이 문제는 사라집니다. PostgreSQL은 외래키를 항상 강제합니다.
+
 **SQLite에서 배열 저장 방식**
 
 SQLite는 배열 타입이 없어서 `companions`, `tasting_tags`, `brew_steps`를 JSON 텍스트로 저장합니다.
@@ -170,4 +185,4 @@ userID := claims.UserID
 
 ---
 
-*Last updated: 2026-03-28*
+*Last updated: 2026-03-29 (SQLite foreign key 기본값 비활성화 및 DSN 활성화 방식 추가)*

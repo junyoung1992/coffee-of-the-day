@@ -86,7 +86,8 @@ type listLogsResponse struct {
 }
 
 type errorResponse struct {
-	Error string `json:"error"`
+	Error string  `json:"error"`
+	Field *string `json:"field,omitempty"`
 }
 
 // --- 핸들러 ---
@@ -106,7 +107,10 @@ func (h *LogHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
 
 	var req createLogRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "요청 본문을 파싱할 수 없습니다")
 		return
 	}
@@ -194,7 +198,10 @@ func (h *LogHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 	logID := chi.URLParam(r, "id")
 
 	var req updateLogRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MiB
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "요청 본문을 파싱할 수 없습니다")
 		return
 	}
@@ -241,13 +248,15 @@ func writeError(w http.ResponseWriter, status int, message string) {
 }
 
 // writeServiceError는 서비스 계층 오류를 HTTP 상태 코드로 매핑한다.
+// ValidationError는 field 정보를 함께 응답하여 프론트에서 인라인 오류를 표시할 수 있도록 한다.
 func writeServiceError(w http.ResponseWriter, err error) {
 	var ve *service.ValidationError
 	switch {
 	case errors.Is(err, service.ErrNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
 	case errors.As(err, &ve):
-		writeError(w, http.StatusBadRequest, err.Error())
+		field := ve.Field
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: ve.Message, Field: &field})
 	default:
 		writeError(w, http.StatusInternalServerError, "내부 오류가 발생했습니다")
 	}

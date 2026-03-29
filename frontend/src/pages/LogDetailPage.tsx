@@ -70,7 +70,7 @@ export default function LogDetailPage() {
 
   return (
     <Layout
-      title="Log detail"
+      title="기록 상세"
       description="기록한 맛과 레시피를 빠르게 다시 읽을 수 있도록 공통 정보와 타입별 세부 정보를 분리해 보여줍니다."
       actions={
         <>
@@ -78,14 +78,14 @@ export default function LogDetailPage() {
             to="/"
             className="inline-flex items-center justify-center rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
           >
-            Back to list
+            목록으로
           </Link>
           {id ? (
             <Link
               to={`/logs/${id}/edit`}
               className="inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white"
             >
-              Edit log
+              수정
             </Link>
           ) : null}
         </>
@@ -143,7 +143,7 @@ export default function LogDetailPage() {
 
           {log.log_type === 'cafe' ? (
             <section className="space-y-4">
-              <h3 className="text-lg font-semibold text-stone-950">Cafe details</h3>
+              <h3 className="text-lg font-semibold text-stone-950">카페 상세</h3>
               <div className="grid gap-4 md:grid-cols-2">
                 <DetailField label="Cafe" value={log.cafe.cafe_name} />
                 <DetailField label="Location" value={log.cafe.location} />
@@ -166,7 +166,7 @@ export default function LogDetailPage() {
             </section>
           ) : (
             <section className="space-y-4">
-              <h3 className="text-lg font-semibold text-stone-950">Brew details</h3>
+              <h3 className="text-lg font-semibold text-stone-950">브루 상세</h3>
               <div className="grid gap-4 md:grid-cols-2">
                 <DetailField label="Bean" value={log.brew.bean_name} />
                 <DetailField label="Brew method" value={brewMethodLabels[log.brew.brew_method]} />
@@ -218,7 +218,7 @@ export default function LogDetailPage() {
               disabled={deleteMutation.isPending}
               className="rounded-full border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete log'}
+              {deleteMutation.isPending ? '삭제 중...' : '삭제'}
             </button>
           </div>
 

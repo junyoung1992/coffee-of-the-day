@@ -582,7 +582,7 @@ func validateRecordedAt(value string) (string, error) {
 		return "", newValidationError("recorded_at", "필수값입니다")
 	}
 	if _, _, err := parseDateTime(trimmed); err != nil {
-		return "", newValidationError("recorded_at", "RFC3339 datetime 또는 YYYY-MM-DD 형식이어야 합니다")
+		return "", newValidationError("recorded_at", "RFC3339 datetime 형식이어야 합니다")
 	}
 	return trimmed, nil
 }
@@ -699,8 +699,10 @@ func cloneInt(value *int) *int {
 	return &cloned
 }
 
+// parseDateTime은 RFC3339 형식만 허용한다.
+// 프론트엔드는 datetime-local 입력을 ISO 문자열로 직렬화하므로 date-only는 지원하지 않는다.
 func parseDateTime(value string) (time.Time, string, error) {
-	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02"} {
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339} {
 		parsed, err := time.Parse(layout, value)
 		if err == nil {
 			return parsed, layout, nil

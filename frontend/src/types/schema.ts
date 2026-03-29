@@ -291,6 +291,11 @@ export interface components {
         ErrorResponse: {
             /** @example X-User-Id 헤더가 필요합니다 */
             error?: string;
+            /**
+             * @description ValidationError일 때만 포함. 오류가 발생한 필드 경로 (예: cafe.cafe_name)
+             * @example cafe.cafe_name
+             */
+            field?: string;
         };
     };
     responses: {

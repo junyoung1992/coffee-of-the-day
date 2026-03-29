@@ -51,7 +51,7 @@ export default function HomePage() {
 
   return (
     <Layout
-      title="Coffee logs that stay readable"
+      title="커피 기록"
       description="카페에서 마신 한 잔과 직접 내린 레시피를 한 화면에서 관리합니다. 목록은 최신순으로 쌓이고, 아래로 스크롤하면 다음 페이지가 이어집니다."
       actions={
         <>
@@ -59,13 +59,13 @@ export default function HomePage() {
             to="/logs/new"
             className="inline-flex items-center justify-center rounded-full border border-amber-900/15 bg-amber-100/70 px-4 py-2 text-sm font-semibold text-amber-950 transition hover:border-amber-900/30 hover:bg-amber-100"
           >
-            Write today&apos;s log
+            오늘의 기록 추가
           </Link>
           <Link
             to="/logs/new"
             className="inline-flex items-center justify-center rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
           >
-            Quick add
+            빠른 추가
           </Link>
         </>
       }
