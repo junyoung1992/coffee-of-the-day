@@ -215,7 +215,8 @@ components:
           type: string
           nullable: true
         roast_level:
-          $ref: '#/components/schemas/RoastLevel'
+          type: string
+          enum: [light, medium, dark]
           nullable: true
         tasting_tags:
           type: array
@@ -249,7 +250,8 @@ components:
           type: string
           nullable: true
         roast_level:
-          $ref: '#/components/schemas/RoastLevel'
+          type: string
+          enum: [light, medium, dark]
           nullable: true
         roast_date:
           type: string
@@ -299,6 +301,7 @@ components:
 
     CoffeeLogResponse:
       type: object
+      required: [id, user_id, recorded_at, companions, log_type, created_at, updated_at]
       properties:
         id:
           type: string
@@ -324,10 +327,8 @@ components:
           format: date-time
         cafe:
           $ref: '#/components/schemas/CafeDetail'
-          nullable: true
         brew:
           $ref: '#/components/schemas/BrewDetail'
-          nullable: true
 
     CreateLogRequest:
       type: object
@@ -378,6 +379,7 @@ components:
 
     ListLogsResponse:
       type: object
+      required: [items, has_next]
       properties:
         items:
           type: array

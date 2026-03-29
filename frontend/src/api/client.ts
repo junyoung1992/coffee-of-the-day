@@ -30,8 +30,9 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    const err = body?.error ?? {}
-    throw new ApiError(res.status, err.code ?? 'UNKNOWN', err.message ?? res.statusText)
+    // 백엔드 에러 응답 형식: { "error": "메시지 문자열" }
+    const message = typeof body?.error === 'string' ? body.error : res.statusText
+    throw new ApiError(res.status, 'UNKNOWN', message)
   }
 
   if (res.status === 204) return undefined as T

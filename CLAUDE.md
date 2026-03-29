@@ -6,6 +6,14 @@
 - All APIs must be implemented in compliance with the OpenAPI Specification.
 - The API specification must be maintained in openapi.yml using the standard OpenAPI format.
 
+### Frontend Type Generation
+- `openapi.yml` is the single source of truth for frontend API types.
+- Frontend types must never be written by hand based on backend source code.
+- Run `npm run generate` inside `frontend/` whenever `openapi.yml` changes to regenerate `src/types/schema.ts`.
+- `src/types/schema.ts` is auto-generated — never edit it manually.
+- `src/types/*.ts` files may re-export or derive types from `schema.ts`, but must not duplicate type definitions that belong in `openapi.yml`.
+- Development workflow: Backend implementation → update `openapi.yml` → run `npm run generate` → implement frontend.
+
 ### COMMENTS
 - Write explanatory comments in Korean.
 - Keep technical terms, domain terminology, method names, and identifiers in their original language when translation would reduce clarity.
@@ -51,7 +59,7 @@
 - BREAKING CHANGE: a commit that has a footer BREAKING CHANGE:, or appends a ! after the type/scope, introduces a breaking API change
 - others: build:, chore:, ci:, docs:, style:, refactor:, perf:, test:, revert:
 
-## STUDY
+## GUIDE
 
 - After completing each phase task, write a study document explaining what was built and why.
 - The target audience is a developer with Java/Spring experience but no Go or TypeScript/React background.
