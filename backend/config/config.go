@@ -20,6 +20,9 @@ func Load() Config {
 	}
 
 	pocSeedUserID := os.Getenv("POC_SEED_USER_ID")
+	if pocSeedUserID == "" {
+		pocSeedUserID = "dev-user"
+	}
 
 	return Config{
 		Port:          port,
