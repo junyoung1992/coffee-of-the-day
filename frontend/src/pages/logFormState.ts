@@ -15,7 +15,7 @@ export type BrewMethodValue =
 export interface LogFormState {
   logType: FormLogType
   recordedAt: string
-  companionsText: string
+  companions: string[]
   memo: string
   cafe: {
     cafeName: string
@@ -24,7 +24,7 @@ export interface LogFormState {
     beanOrigin: string
     beanProcess: string
     roastLevel: RoastLevelValue
-    tastingTagsText: string
+    tastingTags: string[]
     tastingNote: string
     impressions: string
     rating: string
@@ -35,7 +35,7 @@ export interface LogFormState {
     beanProcess: string
     roastLevel: RoastLevelValue
     roastDate: string
-    tastingTagsText: string
+    tastingTags: string[]
     tastingNote: string
     brewMethod: BrewMethodValue
     brewDevice: string
@@ -114,18 +114,12 @@ function normalizeNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function splitCommaSeparated(value: string) {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
 
 export function createEmptyFormState(now = new Date()): LogFormState {
   return {
     logType: 'cafe',
     recordedAt: toDateTimeLocal(now),
-    companionsText: '',
+    companions: [],
     memo: '',
     cafe: {
       cafeName: '',
@@ -134,7 +128,7 @@ export function createEmptyFormState(now = new Date()): LogFormState {
       beanOrigin: '',
       beanProcess: '',
       roastLevel: '',
-      tastingTagsText: '',
+      tastingTags: [],
       tastingNote: '',
       impressions: '',
       rating: '',
@@ -145,7 +139,7 @@ export function createEmptyFormState(now = new Date()): LogFormState {
       beanProcess: '',
       roastLevel: '',
       roastDate: '',
-      tastingTagsText: '',
+      tastingTags: [],
       tastingNote: '',
       brewMethod: 'pour_over',
       brewDevice: '',
@@ -167,7 +161,7 @@ export function logToFormState(log: CoffeeLogFull): LogFormState {
     ...base,
     logType: log.log_type,
     recordedAt: fromRecordedAt(log.recorded_at),
-    companionsText: log.companions.join(', '),
+    companions: log.companions ?? [],
     memo: log.memo ?? '',
   }
 
@@ -179,7 +173,7 @@ export function logToFormState(log: CoffeeLogFull): LogFormState {
       beanOrigin: log.cafe.bean_origin ?? '',
       beanProcess: log.cafe.bean_process ?? '',
       roastLevel: (log.cafe.roast_level ?? '') as RoastLevelValue,
-      tastingTagsText: (log.cafe.tasting_tags ?? []).join(', '),
+      tastingTags: log.cafe.tasting_tags ?? [],
       tastingNote: log.cafe.tasting_note ?? '',
       impressions: log.cafe.impressions ?? '',
       rating: log.cafe.rating ? String(log.cafe.rating) : '',
@@ -193,7 +187,7 @@ export function logToFormState(log: CoffeeLogFull): LogFormState {
       beanProcess: log.brew.bean_process ?? '',
       roastLevel: (log.brew.roast_level ?? '') as RoastLevelValue,
       roastDate: log.brew.roast_date ?? '',
-      tastingTagsText: (log.brew.tasting_tags ?? []).join(', '),
+      tastingTags: log.brew.tasting_tags ?? [],
       tastingNote: log.brew.tasting_note ?? '',
       brewMethod: log.brew.brew_method as BrewMethodValue,
       brewDevice: log.brew.brew_device ?? '',
@@ -215,7 +209,7 @@ export function logToFormState(log: CoffeeLogFull): LogFormState {
 export function buildLogPayload(state: LogFormState): CreateLogInput {
   const payload: CreateLogInput = {
     recorded_at: toApiRecordedAt(state.recordedAt),
-    companions: splitCommaSeparated(state.companionsText),
+    companions: state.companions,
     log_type: state.logType,
   }
 
@@ -228,7 +222,7 @@ export function buildLogPayload(state: LogFormState): CreateLogInput {
     payload.cafe = {
       cafe_name: state.cafe.cafeName.trim(),
       coffee_name: state.cafe.coffeeName.trim(),
-      tasting_tags: splitCommaSeparated(state.cafe.tastingTagsText),
+      tasting_tags: state.cafe.tastingTags,
     }
 
     const location = normalizeText(state.cafe.location)
@@ -252,7 +246,7 @@ export function buildLogPayload(state: LogFormState): CreateLogInput {
     payload.brew = {
       bean_name: state.brew.beanName.trim(),
       brew_method: state.brew.brewMethod,
-      tasting_tags: splitCommaSeparated(state.brew.tastingTagsText),
+      tasting_tags: state.brew.tastingTags,
       brew_steps: state.brew.brewSteps.map((step) => step.trim()).filter(Boolean),
     }
 

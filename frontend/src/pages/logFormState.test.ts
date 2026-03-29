@@ -17,12 +17,12 @@ describe('buildLogPayload', () => {
   it('cafe 폼 상태를 API 요청 본문으로 변환한다', () => {
     const state = createEmptyFormState(new Date('2026-03-29T10:15:00Z'))
     state.recordedAt = '2026-03-29T19:30'
-    state.companionsText = '민수,  지연 '
+    state.companions = ['민수', '지연']
     state.memo = ' 주말 기록 '
     state.cafe.cafeName = '블루보틀 성수'
     state.cafe.coffeeName = '게이샤 드립'
     state.cafe.location = '서울 성수'
-    state.cafe.tastingTagsText = '초콜릿, 자몽'
+    state.cafe.tastingTags = ['초콜릿', '자몽']
     state.cafe.rating = '4.5'
 
     const payload = buildLogPayload(state)
@@ -45,7 +45,7 @@ describe('buildLogPayload', () => {
     state.logType = 'brew'
     state.brew.beanName = '에티오피아 예가체프'
     state.brew.brewMethod = 'aeropress'
-    state.brew.tastingTagsText = '복숭아, 꽃'
+    state.brew.tastingTags = ['복숭아', '꽃']
     state.brew.brewSteps = ['뜸들이기 30초', '본 추출', '  ']
     state.brew.coffeeAmountG = '18'
     state.brew.waterAmountMl = '250'
@@ -103,10 +103,10 @@ describe('logToFormState', () => {
     const state = logToFormState(log)
 
     expect(state.logType).toBe('brew')
-    expect(state.companionsText).toBe('민수, 지연')
+    expect(state.companions).toEqual(['민수', '지연'])
     expect(state.memo).toBe('같이 비교 시음')
     expect(state.brew.beanName).toBe('케냐 AB')
-    expect(state.brew.tastingTagsText).toBe('베리, 홍차')
+    expect(state.brew.tastingTags).toEqual(['베리', '홍차'])
     expect(state.brew.brewSteps).toEqual(['뜸 40초', '3회 나눠 붓기'])
     expect(state.brew.rating).toBe('4.5')
   })

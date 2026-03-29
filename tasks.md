@@ -173,15 +173,15 @@
 
 ### 3-2. 자동완성 컴포넌트 (Frontend)
 
-- [ ] `src/api/suggestions.ts` — `getSuggestions(type, q)`
-- [ ] `src/hooks/useSuggestions.ts` — `useTagSuggestions`, `useCompanionSuggestions`
-- [ ] `src/components/TagInput.tsx` — 텍스트 입력 + 드롭다운 추천 + 태그 뱃지
-- [ ] `LogFormPage`의 `tasting_tags` 필드에 `TagInput` 적용
-- [ ] `LogFormPage`의 `companions` 필드에 `TagInput` 적용
+- [x] `src/api/suggestions.ts` — `getSuggestions(type, q)`
+- [x] `src/hooks/useSuggestions.ts` — `useTagSuggestions`, `useCompanionSuggestions`
+- [x] `src/components/TagInput.tsx` — 텍스트 입력 + 드롭다운 추천 + 태그 뱃지
+- [x] `LogFormPage`의 `tasting_tags` 필드에 `TagInput` 적용
+- [x] `LogFormPage`의 `companions` 필드에 `TagInput` 적용
 
 **Phase 3 완료 기준**
-- [ ] 태그 입력 시 이전 태그 자동완성 제안
-- [ ] 동반자 입력 시 이전 이름 자동완성 제안
+- [x] 태그 입력 시 이전 태그 자동완성 제안
+- [x] 동반자 입력 시 이전 이름 자동완성 제안
 
 ---
 

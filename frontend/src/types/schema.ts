@@ -188,6 +188,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/suggestions/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 테이스팅 태그 자동완성 제안 */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description 검색어 (빈 문자열이면 전체 반환) */
+                    q?: string;
+                };
+                header: {
+                    /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
+                    "X-User-Id": components["parameters"]["XUserId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 제안 목록 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SuggestionsResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/suggestions/companions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 동반자 자동완성 제안 */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description 검색어 (빈 문자열이면 전체 반환) */
+                    q?: string;
+                };
+                header: {
+                    /** @description 사용자 식별자 (POC 단계; Phase 4에서 JWT로 교체) */
+                    "X-User-Id": components["parameters"]["XUserId"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 제안 목록 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SuggestionsResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -262,7 +350,7 @@ export interface components {
         };
         CreateLogRequest: {
             /**
-             * @description RFC3339 또는 YYYY-MM-DD
+             * @description RFC3339 datetime (예: 2026-03-29T10:00:00Z 또는 2026-03-29T10:00:00+09:00)
              * @example 2026-03-29T10:00:00Z
              */
             recorded_at: string;
@@ -273,7 +361,7 @@ export interface components {
             brew?: components["schemas"]["BrewDetail"];
         };
         UpdateLogRequest: {
-            /** @description RFC3339 또는 YYYY-MM-DD */
+            /** @description RFC3339 datetime (예: 2026-03-29T10:00:00Z 또는 2026-03-29T10:00:00+09:00) */
             recorded_at: string;
             companions?: string[];
             log_type: components["schemas"]["LogType"];
@@ -287,6 +375,10 @@ export interface components {
             next_cursor?: string | null;
             /** @description 다음 페이지 존재 여부 */
             has_next: boolean;
+        };
+        SuggestionsResponse: {
+            /** @description 빈도순 정렬된 자동완성 제안 목록 */
+            suggestions: string[];
         };
         ErrorResponse: {
             /** @example X-User-Id 헤더가 필요합니다 */

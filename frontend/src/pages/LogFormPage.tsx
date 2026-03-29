@@ -10,8 +10,10 @@ import {
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RatingInput } from '../components/RatingInput'
+import { TagInput } from '../components/TagInput'
 import { ApiError } from '../api/client'
 import { useCreateLog, useLog, useUpdateLog } from '../hooks/useLogs'
+import { useCompanionSuggestions, useTagSuggestions } from '../hooks/useSuggestions'
 import {
   brewMethodOptions,
   buildLogPayload,
@@ -166,6 +168,9 @@ function CommonFieldsSection({
   setForm: React.Dispatch<React.SetStateAction<LogFormState>>
   fieldErrors: FieldErrors
 }) {
+  const [companionQuery, setCompanionQuery] = useState('')
+  const { data: companionSuggestions = [] } = useCompanionSuggestions(companionQuery)
+
   function handleChange(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = event.target
     setForm((prev) => ({ ...prev, [name]: value }))
@@ -188,12 +193,11 @@ function CommonFieldsSection({
           />
         </Field>
         <Field label="Companions">
-          <input
-            className={inputClassName()}
-            type="text"
-            name="companionsText"
-            value={form.companionsText}
-            onChange={handleChange}
+          <TagInput
+            value={form.companions}
+            onChange={(tags) => setForm((prev) => ({ ...prev, companions: tags }))}
+            suggestions={companionSuggestions}
+            onQueryChange={setCompanionQuery}
             placeholder="민수, 지연"
           />
         </Field>
@@ -222,6 +226,9 @@ function CafeFieldsSection({
   setForm: React.Dispatch<React.SetStateAction<LogFormState>>
   fieldErrors: FieldErrors
 }) {
+  const [tagsQuery, setTagsQuery] = useState('')
+  const { data: tagSuggestions = [] } = useTagSuggestions(tagsQuery)
+
   return (
     <Section
       title="카페 정보"
@@ -286,12 +293,11 @@ function CafeFieldsSection({
         </Field>
         <div className="md:col-span-2">
           <Field label="Tasting tags">
-            <input
-              className={inputClassName()}
-              value={form.cafe.tastingTagsText}
-              onChange={(e) =>
-                setForm((prev) => updateCafeField(prev, 'tastingTagsText', e.target.value))
-              }
+            <TagInput
+              value={form.cafe.tastingTags}
+              onChange={(tags) => setForm((prev) => updateCafeField(prev, 'tastingTags', tags))}
+              suggestions={tagSuggestions}
+              onQueryChange={setTagsQuery}
               placeholder="초콜릿, 체리, 헤이즐넛"
             />
           </Field>
@@ -344,6 +350,9 @@ function BrewFieldsSection({
   setForm: React.Dispatch<React.SetStateAction<LogFormState>>
   fieldErrors: FieldErrors
 }) {
+  const [tagsQuery, setTagsQuery] = useState('')
+  const { data: tagSuggestions = [] } = useTagSuggestions(tagsQuery)
+
   // coffee/water 비율은 brew 섹션 내에서만 사용하므로 여기서 계산한다
   const ratio = useMemo(() => {
     const coffee = Number(form.brew.coffeeAmountG)
@@ -573,12 +582,11 @@ function BrewFieldsSection({
         </div>
         <div className="md:col-span-2">
           <Field label="Tasting tags">
-            <input
-              className={inputClassName()}
-              value={form.brew.tastingTagsText}
-              onChange={(e) =>
-                setForm((prev) => updateBrewField(prev, 'tastingTagsText', e.target.value))
-              }
+            <TagInput
+              value={form.brew.tastingTags}
+              onChange={(tags) => setForm((prev) => updateBrewField(prev, 'tastingTags', tags))}
+              suggestions={tagSuggestions}
+              onQueryChange={setTagsQuery}
               placeholder="꽃, 베리, 카카오"
             />
           </Field>
