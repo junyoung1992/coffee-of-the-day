@@ -221,20 +221,57 @@ qtx := r.queries.WithTx(tx)
 
 ---
 
-## POC 사용자 식별: X-User-Id 헤더
+## 인증: JWT + httpOnly 쿠키
 
-**결정**: 인증 없이 `X-User-Id` 헤더로 user_id를 전달.
+**결정**: Phase 4에서 `X-User-Id` 헤더(POC)를 JWT + httpOnly 쿠키 방식으로 교체.
 
-Phase 1에서 인증 구현 비용을 절약하면서 멀티유저 DB 구조를 검증하기 위한 임시 방편입니다. Phase 4에서 JWT 미들웨어로 교체할 때 `handler` 레이어의 미들웨어만 바꾸면 되고, `service` / `repository` 레이어는 이미 `userID string`을 파라미터로 받고 있어서 변경이 없습니다.
+Phase 1~3은 인증 구현 비용을 절약하면서 멀티유저 DB 구조를 검증하기 위해 헤더 방식을 사용했습니다. `service` / `repository` 레이어가 이미 `userID string` 파라미터를 받는 구조였기 때문에, Phase 4에서 `handler` 미들웨어만 바꿔서 교체가 완료됐습니다.
 
 ```go
-// POC: 헤더에서 읽음
+// POC (Phase 1~3): 헤더에서 읽음
 userID := r.Header.Get("X-User-Id")
 
-// Phase 4: JWT 클레임에서 읽음 (같은 인터페이스)
-userID := claims.UserID
+// Phase 4~: JWT 클레임에서 읽음 (같은 인터페이스)
+userID := claims.Subject  // context에서 추출
 ```
+
+**왜 httpOnly 쿠키인가**
+
+| 방식 | XSS 취약 | CSRF 취약 |
+|---|---|---|
+| `localStorage` | O (JS로 직접 탈취) | X |
+| `httpOnly` 쿠키 | X (JS 접근 불가) | O (SameSite로 완화) |
+
+`httpOnly + SameSite=Strict` 조합으로 두 공격 벡터를 모두 완화합니다.
+
+**Access Token + Refresh Token 분리**
+
+- **Access token** (15분): 짧은 수명 → 탈취돼도 피해 최소화
+- **Refresh token** (7일): 긴 수명, httpOnly 쿠키 전용 → 자동 갱신 UX 유지
+
+두 토큰 모두 동일한 비밀키로 서명되므로 `token_type` 클레임으로 혼용을 방지합니다. 리프레시 토큰을 액세스 토큰 자리에 사용하는 **토큰 혼용 공격(token confusion attack)**을 차단합니다.
+
+```go
+// JWTMiddleware에서 token_type 검증
+if claims.TokenType != "access" {
+    return "", fmt.Errorf("expected access token, got %q", claims.TokenType)
+}
+```
+
+**레이어 구조**
+
+```
+handler/auth_handler.go        ← HTTP 요청 파싱, 쿠키 설정/만료
+handler/middleware.go          ← JWTMiddleware: 쿠키 검증 → context에 userID 주입
+service/auth_service.go        ← 비밀번호 검증(bcrypt), JWT 생성/파싱
+repository/user_repository.go  ← users 테이블 CRUD (sqlc)
+db/migrations/005_*.sql        ← email, password_hash 컬럼 추가
+```
+
+**CORS와 쿠키**
+
+쿠키를 cross-origin 요청에서 전송하려면 `Access-Control-Allow-Credentials: true`가 필요하며, 이때 `*` 와일드카드 origin은 사용 불가합니다. 기존에 이미 specific origin(`localhost:5173`)을 허용하던 CORS 설정이 그대로 호환됩니다.
 
 ---
 
-*Last updated: 2026-03-29 (sqlc + raw SQL 병행 전략, repository 트랜잭션 책임, Phase 3 레이어 확장 반영)*
+*Last updated: 2026-03-30 (Phase 4 JWT 인증 반영)*

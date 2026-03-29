@@ -101,14 +101,33 @@ const mutation = useMutation({
 
 **URL 상태**는 `useSearchParams`로 관리합니다. Phase 2부터 목록 필터를 URL에 반영해 새로고침, 공유, 뒤로가기와 자연스럽게 연결되도록 설계했습니다.
 
-Phase 3 자동완성도 같은 원칙을 따릅니다.
+Phase 3 자동완성, Phase 4 인증 상태 모두 같은 원칙을 따릅니다.
 
 - API 호출: `useQuery`
 - 목록 누적: `useInfiniteQuery`
 - 조건부 요청: `enabled`
 - 캐시 구분: `queryKey`
 
-즉, 이 프로젝트에서 TanStack Query는 단순 fetch helper가 아니라 **서버 상태 캐시 계층**입니다.
+**인증 상태도 TanStack Query로 관리**
+
+Phase 4에서 인증 상태를 `useState`나 Context 대신 TanStack Query 캐시로 관리합니다.
+
+```typescript
+export const AUTH_KEY = ['auth', 'me'] as const
+
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: AUTH_KEY,
+    queryFn: getMe,        // GET /api/v1/auth/me
+    retry: false,          // 401에 재시도 무의미
+    staleTime: 5 * 60_000, // 5분간 캐시 유지 → 페이지 이동 시 불필요한 /me 요청 없음
+  })
+}
+```
+
+로그인 성공 시 서버가 이미 반환한 user를 `queryClient.setQueryData(AUTH_KEY, user)`로 캐시에 직접 저장합니다. `/me` 네트워크 요청 없이 UI가 즉시 갱신됩니다. 로그아웃 시에는 `queryClient.clear()`로 전체 캐시를 비워 모든 사용자 데이터를 제거합니다.
+
+즉, 이 프로젝트에서 TanStack Query는 단순 fetch helper가 아니라 **서버 상태 캐시 계층이자 인증 상태 저장소**입니다.
 
 ---
 
@@ -116,27 +135,44 @@ Phase 3 자동완성도 같은 원칙을 따릅니다.
 
 **결정**: React Router v7 사용.
 
-현재 구현은 `createBrowserRouter` 기반의 단순 라우트 구성입니다.
+Phase 4에서 인증이 추가되면서 `ProtectedRoute` 패턴이 도입됐습니다. 인증이 필요한 라우트를 하나의 부모 요소로 감싸는 방식입니다.
 
 ```tsx
+function ProtectedRoute() {
+  const { data: user, isLoading, isError } = useCurrentUser()
+
+  if (isLoading) return null          // 깜빡임 방지
+  if (isError || !user) return <Navigate to="/login" replace />
+  return <Outlet />                   // 자식 라우트 렌더링
+}
+
 export const router = createBrowserRouter([
-  { path: '/', element: <HomePage /> },
-  { path: '/logs/new', element: <LogFormPage /> },
-  { path: '/logs/:id', element: <LogDetailPage /> },
-  { path: '/logs/:id/edit', element: <LogFormPage /> },
+  { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
+  {
+    element: <ProtectedRoute />,      // 인증 게이트
+    children: [
+      { path: '/', element: <HomePage /> },
+      { path: '/logs/new', element: <LogFormPage /> },
+      { path: '/logs/:id', element: <LogDetailPage /> },
+      { path: '/logs/:id/edit', element: <LogFormPage /> },
+    ],
+  },
 ])
 ```
 
-라우트 수가 적고, 각 화면의 데이터 로딩은 이미 TanStack Query 훅이 담당하고 있으므로 현재 단계에서는 `loader` / `action` 중심 구조보다 이 구성이 더 단순합니다.
+`<Outlet />`은 Spring MVC의 `FilterChain.doFilter()`와 유사합니다 — 검사를 통과하면 다음 계층(실제 페이지)으로 요청을 넘깁니다.
+
+라우트 수가 적고, 각 화면의 데이터 로딩은 이미 TanStack Query 훅이 담당하고 있으므로 `loader` / `action` 중심 구조보다 이 구성이 더 단순합니다.
 
 ```
-/                    → HomePage (기록 목록)
-/logs/new            → LogFormPage (신규 작성)
-/logs/:id            → LogDetailPage (상세)
-/logs/:id/edit       → LogFormPage (수정, 같은 컴포넌트 재사용)
+/login               → LoginPage (공개)
+/register            → RegisterPage (공개)
+/                    → HomePage (인증 필요)
+/logs/new            → LogFormPage (인증 필요)
+/logs/:id            → LogDetailPage (인증 필요)
+/logs/:id/edit       → LogFormPage (인증 필요, id 파라미터로 생성/수정 구분)
 ```
-
-`/logs/new`와 `/logs/:id/edit`을 같은 `LogFormPage` 컴포넌트로 처리합니다. `id` 파라미터 유무로 생성/수정을 구분합니다.
 
 ---
 
@@ -214,4 +250,4 @@ if (log.log_type === 'cafe') {
 
 ---
 
-*Last updated: 2026-03-29 (React 19 / React Router v7 / Tailwind CSS v4 / OpenAPI 타입 흐름 반영)*
+*Last updated: 2026-03-30 (Phase 4 인증 UI — ProtectedRoute, TanStack Query 인증 상태 관리 반영)*
