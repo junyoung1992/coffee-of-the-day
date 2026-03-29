@@ -41,7 +41,7 @@ WITH all_tags AS (
 )
 SELECT tag, COUNT(*) AS cnt
 FROM all_tags
-WHERE ? = '' OR LOWER(tag) LIKE '%' || LOWER(?) || '%'
+WHERE ? = '' OR LOWER(tag) LIKE LOWER(?) || '%'
 GROUP BY tag
 ORDER BY cnt DESC, tag ASC
 LIMIT 10
@@ -62,7 +62,7 @@ SELECT j.value AS companion, COUNT(*) AS cnt
 FROM coffee_logs l
 JOIN json_each(l.companions) j
 WHERE l.user_id = ?
-  AND (? = '' OR LOWER(j.value) LIKE '%' || LOWER(?) || '%')
+  AND (? = '' OR LOWER(j.value) LIKE LOWER(?) || '%')
 GROUP BY companion
 ORDER BY cnt DESC, companion ASC
 LIMIT 10

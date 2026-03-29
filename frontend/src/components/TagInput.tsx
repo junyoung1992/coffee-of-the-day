@@ -38,6 +38,9 @@ export function TagInput({ value, onChange, suggestions = [], placeholder, onQue
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' || e.key === ',') {
+      // IME 조합 중(한국어, 중국어 등)에는 Enter/쉼표를 무시한다.
+      // isComposing이 true인 동안은 문자가 아직 확정되지 않은 상태다.
+      if (e.nativeEvent.isComposing) return
       // 쉼표 또는 엔터로 즉시 태그 추가 — 폼 제출을 막는다
       e.preventDefault()
       addTag(inputValue)
