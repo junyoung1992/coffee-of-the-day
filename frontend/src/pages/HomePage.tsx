@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { FilterBar } from '../components/FilterBar'
 import { Layout } from '../components/Layout'
 import { LogCard } from '../components/LogCard'
 import { useLogList } from '../hooks/useLogs'
+import type { LogType } from '../types/log'
 import type { ApiErrorLike } from '../types/common'
 
 function getErrorMessage(error: unknown) {
@@ -12,7 +14,20 @@ function getErrorMessage(error: unknown) {
   return '기록을 불러오는 중 오류가 발생했습니다.'
 }
 
+// URL 쿼리 파라미터에서 log_type 값을 검증하여 파싱한다
+function parseLogType(value: string | null): LogType | undefined {
+  if (value === 'cafe' || value === 'brew') return value
+  return undefined
+}
+
 export default function HomePage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // URL 파라미터에서 현재 필터 상태를 파싱한다
+  const logType = parseLogType(searchParams.get('log_type'))
+  const dateFrom = searchParams.get('date_from') ?? ''
+  const dateTo = searchParams.get('date_to') ?? ''
+
   const {
     data,
     error,
@@ -22,7 +37,12 @@ export default function HomePage() {
     isFetchingNextPage,
     isLoading,
     isRefetching,
-  } = useLogList({ limit: 12 })
+  } = useLogList({
+    limit: 12,
+    log_type: logType,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  })
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   const logs = useMemo(
@@ -48,6 +68,52 @@ export default function HomePage() {
     observer.observe(node)
     return () => observer.disconnect()
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, logs.length])
+
+  // 필터 변경 핸들러: URL 파라미터를 업데이트한다
+  const handleLogTypeChange = useCallback(
+    (value: LogType | undefined) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (value) {
+          next.set('log_type', value)
+        } else {
+          next.delete('log_type')
+        }
+        return next
+      })
+    },
+    [setSearchParams],
+  )
+
+  const handleDateFromChange = useCallback(
+    (value: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (value) {
+          next.set('date_from', value)
+        } else {
+          next.delete('date_from')
+        }
+        return next
+      })
+    },
+    [setSearchParams],
+  )
+
+  const handleDateToChange = useCallback(
+    (value: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (value) {
+          next.set('date_to', value)
+        } else {
+          next.delete('date_to')
+        }
+        return next
+      })
+    },
+    [setSearchParams],
+  )
 
   return (
     <Layout
@@ -86,6 +152,15 @@ export default function HomePage() {
             </span>
           ) : null}
         </div>
+
+        <FilterBar
+          logType={logType}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onLogTypeChange={handleLogTypeChange}
+          onDateFromChange={handleDateFromChange}
+          onDateToChange={handleDateToChange}
+        />
 
         {isError ? (
           <div className="rounded-[1.5rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">

@@ -1,4 +1,4 @@
-# Coffee of the Day — 서비스 명세서 (Draft v0.3)
+# Coffee of the Day — 서비스 명세서
 
 > 이 문서는 SDD(Spec-Driven Development) 기반으로 작성된 요구사항 명세입니다.
 > 구현 전 합의된 스펙으로서, 도메인 모델·API·UI 흐름의 기준이 됩니다.

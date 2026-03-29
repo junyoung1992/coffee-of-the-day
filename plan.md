@@ -1,4 +1,4 @@
-# Coffee of the Day — 개발 계획 (plan.md)
+# Coffee of the Day — 개발 계획
 
 > 각 Phase는 독립적으로 동작 가능한 상태(vertical slice)로 완료됩니다.
 > 좁은 기능이라도 백엔드 + 프론트엔드가 함께 동작하는 것을 목표로 합니다.
