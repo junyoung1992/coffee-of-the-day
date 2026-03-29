@@ -101,7 +101,7 @@ export default function HomePage() {
             </p>
             <Link
               to="/logs/new"
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-amber-900"
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white"
             >
               Create first log
             </Link>

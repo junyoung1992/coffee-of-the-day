@@ -215,7 +215,7 @@ export default function LogFormPage() {
             type="submit"
             form="log-form"
             disabled={activeMutation.isPending || (isEditMode && isLoading)}
-            className="inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             {activeMutation.isPending ? 'Saving...' : isEditMode ? 'Save changes' : 'Create log'}
           </button>
@@ -256,13 +256,13 @@ export default function LogFormPage() {
                     className={[
                       'rounded-[1.5rem] border p-5 text-left transition',
                       selected
-                        ? 'border-amber-900 bg-amber-900 text-amber-50 shadow-[0_16px_40px_rgba(123,79,34,0.22)]'
+                        ? 'border-amber-900 bg-amber-900 !text-white shadow-[0_16px_40px_rgba(123,79,34,0.22)]'
                         : 'border-amber-950/10 bg-white text-stone-800 hover:border-amber-900/25 hover:bg-amber-50/60',
                       isEditMode ? 'cursor-not-allowed opacity-70' : '',
                     ].join(' ')}
                   >
                     <p className="text-base font-semibold">{type === 'cafe' ? 'Cafe log' : 'Brew log'}</p>
-                    <p className={`mt-2 text-sm ${selected ? 'text-amber-50/85' : 'text-stone-500'}`}>
+                    <p className={`mt-2 text-sm ${selected ? '!text-white/85' : 'text-stone-500'}`}>
                       {type === 'cafe'
                         ? '카페 이름, 메뉴, 인상 중심으로 기록'
                         : '원두, 추출 방식, 레시피 중심으로 기록'}

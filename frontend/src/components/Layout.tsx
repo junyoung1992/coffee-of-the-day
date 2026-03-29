@@ -23,7 +23,7 @@ export function Layout({ title, description, actions, children }: LayoutProps) {
           </Link>
           <Link
             to="/logs/new"
-            className="inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-amber-50 transition hover:bg-amber-900"
+            className="inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white"
           >
             New Log
           </Link>

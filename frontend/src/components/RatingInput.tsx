@@ -35,7 +35,7 @@ export function RatingInput({ value, onChange }: RatingInputProps) {
               className={[
                 'rounded-2xl border px-3 py-2 text-left transition',
                 selected
-                  ? 'border-amber-900 bg-amber-900 text-amber-50 shadow-[0_10px_30px_rgba(120,69,20,0.2)]'
+                  ? 'border-amber-900 bg-amber-900 !text-white shadow-[0_10px_30px_rgba(120,69,20,0.2)]'
                   : 'border-amber-950/10 bg-white text-stone-700 hover:border-amber-900/30 hover:bg-amber-50',
               ].join(' ')}
               aria-pressed={selected}
