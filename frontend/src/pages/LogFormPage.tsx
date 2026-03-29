@@ -632,6 +632,7 @@ function BrewFieldsSection({
                   </div>
                   <textarea
                     className={`${textareaClassName()} mt-3 min-h-[90px]`}
+                    aria-label={`Brew step ${index + 1}`}
                     value={step}
                     onChange={(e) => updateStep(index, e.target.value)}
                     placeholder="예: 30초 뜸, 3회 나눠 붓기"

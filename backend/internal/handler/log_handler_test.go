@@ -385,14 +385,16 @@ func TestCORSMiddleware_Options(t *testing.T) {
 		t.Fatal("OPTIONS preflight should not reach next handler")
 	})
 
-	r := httptest.NewRequest(http.MethodOptions, "/api/v1/logs", nil)
-	r.Header.Set("Origin", "http://localhost:5173")
-	w := httptest.NewRecorder()
+	for _, origin := range []string{"http://localhost:5173", "http://127.0.0.1:4173"} {
+		r := httptest.NewRequest(http.MethodOptions, "/api/v1/logs", nil)
+		r.Header.Set("Origin", origin)
+		w := httptest.NewRecorder()
 
-	CORSMiddleware(next).ServeHTTP(w, r)
+		CORSMiddleware(next).ServeHTTP(w, r)
 
-	assert.Equal(t, http.StatusNoContent, w.Code)
-	assert.Equal(t, "http://localhost:5173", w.Header().Get("Access-Control-Allow-Origin"))
+		assert.Equal(t, http.StatusNoContent, w.Code)
+		assert.Equal(t, origin, w.Header().Get("Access-Control-Allow-Origin"))
+	}
 }
 
 func TestCORSMiddleware_UnknownOrigin(t *testing.T) {

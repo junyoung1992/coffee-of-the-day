@@ -172,7 +172,6 @@ export default function HomePage() {
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              // eslint-disable-next-line react/no-array-index-key
               <LogCardSkeleton key={i} />
             ))}
           </div>
@@ -201,7 +200,6 @@ export default function HomePage() {
             {/* 다음 페이지 로딩 중: 그리드 하단에 스켈레톤 카드를 이어 붙인다 */}
             {isFetchingNextPage
               ? Array.from({ length: 3 }).map((_, i) => (
-                  // eslint-disable-next-line react/no-array-index-key
                   <LogCardSkeleton key={`skeleton-next-${i}`} />
                 ))
               : null}

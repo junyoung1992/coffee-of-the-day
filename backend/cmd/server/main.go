@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -32,6 +34,10 @@ func main() {
 
 	if err := runMigrations(db); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
+	}
+
+	if err := ensurePOCUser(db, cfg.POCSeedUserID); err != nil {
+		log.Fatalf("failed to ensure POC user: %v", err)
 	}
 
 	// 의존성 연결: Repository → Service → Handler
@@ -87,6 +93,28 @@ func runMigrations(db *sql.DB) error {
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("run migrations: %w", err)
+	}
+
+	return nil
+}
+
+func ensurePOCUser(db *sql.DB, userID string) error {
+	trimmedUserID := strings.TrimSpace(userID)
+	if trimmedUserID == "" {
+		return nil
+	}
+
+	// POC/E2E 환경에서는 인증이 없으므로 테스트용 사용자를 선행 생성해 둔다.
+	// 기존 사용자가 있으면 그대로 재사용하고, 없을 때만 최소 정보로 추가한다.
+	_, err := db.Exec(
+		`INSERT OR IGNORE INTO users (id, username, display_name, created_at) VALUES (?, ?, ?, ?)`,
+		trimmedUserID,
+		"poc-"+trimmedUserID,
+		"POC User",
+		time.Now().UTC().Format(time.RFC3339),
+	)
+	if err != nil {
+		return fmt.Errorf("insert poc user: %w", err)
 	}
 
 	return nil

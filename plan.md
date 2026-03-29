@@ -209,6 +209,14 @@ GET /api/v1/logs?sort_by=recorded_at&order=desc&cursor=<opaque>&limit=20
 **Phase 2 완료 기준**
 - 브루 기록을 레시피 포함 완전히 기록할 수 있다
 - 타입/날짜 필터로 원하는 기록만 볼 수 있다
+- 핵심 happy-path(`생성 → 목록 → 상세 → 수정 → 삭제`)가 E2E로 자동 검증된다
+
+### 2-4. Happy-path E2E 자동화
+
+- Playwright 기반 브라우저 E2E 환경 구성
+- 실제 백엔드 + 프론트엔드 서버를 테스트가 직접 기동
+- 최소 시나리오: `생성 → 목록 반영 → 상세 → 수정 → 삭제`
+- 브루 로그 1개 happy-path를 기준으로 CRUD와 목록 필터를 함께 검증
 
 ---
 

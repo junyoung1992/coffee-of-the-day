@@ -3,8 +3,9 @@ package config
 import "os"
 
 type Config struct {
-	Port   string
-	DBPath string
+	Port          string
+	DBPath        string
+	POCSeedUserID string
 }
 
 func Load() Config {
@@ -18,8 +19,11 @@ func Load() Config {
 		dbPath = "coffee.db"
 	}
 
+	pocSeedUserID := os.Getenv("POC_SEED_USER_ID")
+
 	return Config{
-		Port:   port,
-		DBPath: dbPath,
+		Port:          port,
+		DBPath:        dbPath,
+		POCSeedUserID: pocSeedUserID,
 	}
 }
