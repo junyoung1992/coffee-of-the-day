@@ -45,6 +45,10 @@ func main() {
 	logSvc := service.NewLogService(logRepo)
 	logHandler := handler.NewLogHandler(logSvc)
 
+	suggestionRepo := repository.NewSQLiteSuggestionRepository(db)
+	suggestionSvc := service.NewSuggestionService(suggestionRepo)
+	suggestionHandler := handler.NewSuggestionHandler(suggestionSvc)
+
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
@@ -70,6 +74,13 @@ func main() {
 			r.Get("/{id}", logHandler.GetLog)
 			r.Put("/{id}", logHandler.UpdateLog)
 			r.Delete("/{id}", logHandler.DeleteLog)
+		})
+
+		r.Route("/suggestions", func(r chi.Router) {
+			r.Use(handler.UserIDMiddleware)
+
+			r.Get("/tags", suggestionHandler.GetTagSuggestions)
+			r.Get("/companions", suggestionHandler.GetCompanionSuggestions)
 		})
 	})
 

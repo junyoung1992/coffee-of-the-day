@@ -11,6 +11,8 @@ servers:
 tags:
   - name: logs
     description: 커피 기록 관리
+  - name: suggestions
+    description: 자동완성 제안
 
 paths:
   /api/v1/logs:
@@ -142,6 +144,52 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/v1/suggestions/tags:
+    get:
+      summary: 테이스팅 태그 자동완성 제안
+      tags: [suggestions]
+      parameters:
+        - $ref: '#/components/parameters/XUserId'
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: 검색어 (빈 문자열이면 전체 반환)
+      responses:
+        '200':
+          description: 제안 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/suggestions/companions:
+    get:
+      summary: 동반자 자동완성 제안
+      tags: [suggestions]
+      parameters:
+        - $ref: '#/components/parameters/XUserId'
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: 검색어 (빈 문자열이면 전체 반환)
+      responses:
+        '200':
+          description: 제안 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
 components:
   parameters:
@@ -392,6 +440,16 @@ components:
         has_next:
           type: boolean
           description: 다음 페이지 존재 여부
+
+    SuggestionsResponse:
+      type: object
+      required: [suggestions]
+      properties:
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: 빈도순 정렬된 자동완성 제안 목록
 
     ErrorResponse:
       type: object

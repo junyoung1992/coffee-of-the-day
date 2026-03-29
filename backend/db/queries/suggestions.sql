@@ -1,0 +1,39 @@
+-- 자동완성 집계 쿼리
+-- sqlc가 json_each() 가상 테이블을 지원하지 않아 raw SQL로 실행한다.
+-- 실제 구현은 internal/repository/suggestion_repository.go 참조.
+
+-- [GetTagSuggestions]
+-- cafe_logs와 brew_logs 양쪽의 tasting_tags를 통합하여 빈도순으로 반환한다.
+-- json_each()로 JSON 배열을 행으로 펼쳐 GROUP BY로 집계한다.
+--
+-- WITH all_tags AS (
+--     SELECT j.value AS tag
+--     FROM cafe_logs cl
+--     JOIN coffee_logs l ON l.id = cl.log_id
+--     JOIN json_each(cl.tasting_tags) j
+--     WHERE l.user_id = :user_id
+--     UNION ALL
+--     SELECT j.value AS tag
+--     FROM brew_logs bl
+--     JOIN coffee_logs l ON l.id = bl.log_id
+--     JOIN json_each(bl.tasting_tags) j
+--     WHERE l.user_id = :user_id
+-- )
+-- SELECT tag, COUNT(*) AS cnt
+-- FROM all_tags
+-- WHERE :q = '' OR LOWER(tag) LIKE '%' || LOWER(:q) || '%'
+-- GROUP BY tag
+-- ORDER BY cnt DESC, tag ASC
+-- LIMIT 10;
+
+-- [GetCompanionSuggestions]
+-- coffee_logs의 companions JSON 배열을 집계하여 빈도순으로 반환한다.
+--
+-- SELECT j.value AS companion, COUNT(*) AS cnt
+-- FROM coffee_logs l
+-- JOIN json_each(l.companions) j
+-- WHERE l.user_id = :user_id
+--   AND (:q = '' OR LOWER(j.value) LIKE '%' || LOWER(:q) || '%')
+-- GROUP BY companion
+-- ORDER BY cnt DESC, companion ASC
+-- LIMIT 10;

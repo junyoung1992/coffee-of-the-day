@@ -166,10 +166,10 @@
 
 ### 3-1. 자동완성 API (Backend)
 
-- [ ] `db/queries/suggestions.sql` — 유저의 `tasting_tags` 집계 쿼리 (빈도순)
-- [ ] `db/queries/suggestions.sql` — 유저의 `companions` 집계 쿼리 (빈도순)
-- [ ] `GET /api/v1/suggestions/tags?q=` 핸들러
-- [ ] `GET /api/v1/suggestions/companions?q=` 핸들러
+- [x] `db/queries/suggestions.sql` — 유저의 `tasting_tags` 집계 쿼리 (빈도순)
+- [x] `db/queries/suggestions.sql` — 유저의 `companions` 집계 쿼리 (빈도순)
+- [x] `GET /api/v1/suggestions/tags?q=` 핸들러
+- [x] `GET /api/v1/suggestions/companions?q=` 핸들러
 
 ### 3-2. 자동완성 컴포넌트 (Frontend)
 
