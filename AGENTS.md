@@ -2,15 +2,48 @@
 
 ## Purpose
 
-- This file is the cross-agent source of truth for repository-wide instructions.
-- When a tool also supports its own memory file, keep tool-specific wrappers minimal and defer shared rules to this file.
+This file is the cross-agent source of truth for repository-wide instructions.
+When a tool also supports its own memory file, keep tool-specific wrappers minimal and defer shared rules to this file.
+
+## Project Context
+
+Coffee of the Day — a personal coffee journal app (POC, single-user).
+
+- **Backend**: Go + chi + sqlc + SQLite (`backend/`)
+- **Frontend**: React + TypeScript + Vite + TanStack Query + Tailwind CSS v4 (`frontend/`)
+
+### Directory Structure
+
+```
+backend/
+  cmd/server/main.go                    # entrypoint
+  internal/{handler,service,repository,domain}/
+  db/{migrations,queries}/
+  config/
+frontend/
+  src/{pages,components,api,types,hooks}/
+  src/types/schema.ts                   # auto-generated from openapi.yml — never edit manually
+```
 
 ## Reference
 
-- Read `spec.md` and `plan.md` first when requirements are unclear.
-- Use `tasks.md` as the implementation checklist.
-- Use `guide/architecture/backend.md` for backend architecture rationale and dependency decisions.
-- Use `guide/architecture/frontend.md` for frontend architecture rationale and dependency decisions.
+Read these files only when relevant to the task at hand — do not read them preemptively.
+
+### For implementation
+
+- `spec.md`, `plan.md`: consult when requirements are unclear
+- `tasks.md`: use as an implementation checklist when working on a phase
+- `guide/architecture/backend.md`: consult for backend architecture rationale and dependency decisions
+- `guide/architecture/frontend.md`: consult for frontend architecture rationale and dependency decisions
+- `guide/phase/phase_{N}_{M}_{backend|frontend}.md`: consult when implementing a new phase or understanding prior implementation decisions
+
+### For code review and refactoring
+
+- `review/`: consult when doing code review or refactoring
+
+### For learning (not needed during development)
+
+- `guide/language/go.md`, `guide/language/typescript.md`: language-specific study guides for the user
 
 ## Code Style
 
@@ -26,7 +59,7 @@
 - Run `npm run generate` inside `frontend/` whenever `openapi.yml` changes to regenerate `src/types/schema.ts`.
 - `src/types/schema.ts` is auto-generated. Never edit it manually.
 - `src/types/*.ts` files may re-export or derive types from `schema.ts`, but must not duplicate type definitions that belong in `openapi.yml`.
-- Preferred workflow: backend implementation, then `openapi.yml` update, then `npm run generate`, then frontend implementation.
+- Preferred workflow: backend implementation → `openapi.yml` update → `npm run generate` → frontend implementation.
 
 ### Comments
 
@@ -68,18 +101,4 @@
 ## Commit
 
 - Follow the Conventional Commits specification.
-- Do not create commits automatically.
-- Perform commits only after review is completed and the user explicitly requests a commit.
-
-```text
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
-```
-
-- `fix`: patches a bug in the codebase.
-- `feat`: introduces a new feature to the codebase.
-- `BREAKING CHANGE`: use a `BREAKING CHANGE:` footer, or append `!` after the type or scope, when introducing a breaking API change.
-- Other common types: `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`.
+- Do not create commits automatically. Commit only after review is completed and the user explicitly requests it.

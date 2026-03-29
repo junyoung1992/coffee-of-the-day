@@ -290,7 +290,7 @@ POST /api/v1/auth/logout
 | Frontend 번들러 | Vite | 5.x |
 | UI 프레임워크 | React | 18.x |
 | 언어 | TypeScript | 5.x |
-| 스타일 | Tailwind CSS | v3 |
+| 스타일 | Tailwind CSS | v4 |
 | 서버 상태 | TanStack Query | v5 |
 | 라우팅 | React Router | v6 |
 

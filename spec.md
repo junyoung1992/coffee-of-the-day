@@ -130,7 +130,7 @@
 - 프론트엔드: 입력 시 자동완성 드롭다운으로 제안.
 
 ```
-GET /api/v1/tags/suggestions?q=<검색어>
+GET /api/v1/suggestions/tags?q=<검색어>
 ```
 
 ---
@@ -140,7 +140,7 @@ GET /api/v1/tags/suggestions?q=<검색어>
 **현재 결정**: 텍스트 배열로 저장. 프론트엔드에서 이전에 입력한 이름을 자동완성으로 제안.
 
 ```
-GET /api/v1/companions/suggestions?q=<검색어>
+GET /api/v1/suggestions/companions?q=<검색어>
 ```
 
 > POC 이후: 사용자별 Companion 목록 테이블(`user_companions`)로 마이그레이션 가능.
