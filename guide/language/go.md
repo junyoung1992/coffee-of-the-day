@@ -1,7 +1,7 @@
-# Go 학습 가이드 — Phase 1-2 코드 따라가기
+# Go 학습 가이드 — Phase 1-3 코드 따라가기
 
 > 대상 독자: Java/Spring 개발자  
-> 목표: Coffee of the Day Phase 1-2 코드를 읽을 때 필요한 Go 문법과 사고방식을 빠르게 익힌다.
+> 목표: Coffee of the Day Phase 1-3 코드를 읽을 때 필요한 Go 문법과 사고방식을 빠르게 익힌다.
 
 ---
 
@@ -625,9 +625,152 @@ query += ` ORDER BY recorded_at DESC, id DESC LIMIT ?`
 
 ---
 
-## 21. 이 프로젝트에서 꼭 익혀야 할 Go 문법 우선순위
+## 21. `database/sql`과 raw SQL 병행 읽기
 
-Phase 1-2 코드를 리뷰하려면 아래 순서로 익히는 것이 가장 효율적입니다.
+Phase 3 자동완성에서는 sqlc만으로 처리하지 않고, 일부 쿼리를 `database/sql`로 직접 실행합니다.
+
+```go
+rows, err := r.db.QueryContext(ctx, tagSuggestionsQuery, userID, userID, q, q)
+if err != nil {
+    return nil, fmt.Errorf("get tag suggestions: %w", err)
+}
+defer rows.Close()
+```
+
+이 코드는 "sqlc를 우회한 예외 처리"가 아니라, **sqlc도 내부적으로 쓰는 표준 라이브러리 API를 직접 호출한 것**입니다.
+
+Spring/JdbcTemplate으로 비유하면:
+
+- 평소에는 생성된 repository 메서드를 쓰다가
+- 특수한 집계 쿼리만 `jdbcTemplate.query(...)`를 직접 쓰는 상황
+
+과 비슷합니다.
+
+여기서 읽어야 할 포인트는 세 가지입니다.
+
+- `QueryContext`는 여러 행을 반환하는 SELECT에 사용한다
+- 바인딩 값은 `?` 개수와 순서를 정확히 맞춰야 한다
+- 반환된 `rows`는 반드시 `Close()`해야 한다
+
+즉, Phase 3부터는 "Go 문법"만이 아니라 **표준 라이브러리 DB API를 직접 읽는 눈**도 필요합니다.
+
+---
+
+## 22. `sql.Rows` 순회와 스캔 패턴
+
+raw SQL을 직접 실행하면 결과를 수동으로 읽어야 합니다.
+
+```go
+func scanSuggestions(rows *sql.Rows) ([]string, error) {
+    var suggestions []string
+    for rows.Next() {
+        var value string
+        var cnt int64
+        if err := rows.Scan(&value, &cnt); err != nil {
+            return nil, fmt.Errorf("scan suggestion row: %w", err)
+        }
+        suggestions = append(suggestions, value)
+    }
+    if err := rows.Err(); err != nil {
+        return nil, fmt.Errorf("iterate suggestion rows: %w", err)
+    }
+    if suggestions == nil {
+        return []string{}, nil
+    }
+    return suggestions, nil
+}
+```
+
+이 패턴은 거의 Go의 정석입니다.
+
+1. `for rows.Next()`로 한 행씩 순회
+2. `rows.Scan(...)`으로 현재 행 값을 변수에 복사
+3. 루프가 끝난 뒤 `rows.Err()`로 순회 중 오류 확인
+
+Java의 `ResultSet`와 매우 비슷하지만, Go는 보통 이 흐름을 helper 함수로 감싸 재사용합니다.
+
+특히 이 프로젝트에서는 `[]string(nil)` 대신 `[]string{}`를 반환해 JSON 응답이 `null`이 아니라 빈 배열이 되도록 맞춥니다.
+즉, DB 계층에서부터 API 응답 모양까지 의식하고 있다는 뜻입니다.
+
+---
+
+## 23. 입력 정규화 함수와 validation helper 재사용
+
+Phase 3 서비스 코드는 새 검증 로직을 전부 다시 쓰지 않고, 기존 helper를 재사용합니다.
+
+```go
+normalizedUserID, err := validateIdentifier("user_id", userID)
+if err != nil {
+    return nil, err
+}
+
+normalizedQ, err := normalizeQ(q)
+if err != nil {
+    return nil, err
+}
+```
+
+그리고 `normalizeQ`는 아주 작은 함수로 분리되어 있습니다.
+
+```go
+func normalizeQ(q string) (string, error) {
+    trimmed := strings.TrimSpace(q)
+    if len(trimmed) > 100 {
+        return "", newValidationError("q", "검색어는 100자 이하여야 합니다")
+    }
+    return trimmed, nil
+}
+```
+
+이런 코드는 Java/Spring의:
+
+- `@Validated`로 다 해결되지 않는 입력 정리
+- 서비스 진입 직후 수행하는 `trim`, 길이 제한, 공통 예외 생성
+
+과 비슷한 역할입니다.
+
+핵심은 다음입니다.
+
+- HTTP 레이어는 문자열을 꺼내오기만 한다
+- service는 "이 문자열을 실제 비즈니스 입력으로 써도 되는가"를 판단한다
+- 정규화와 검증을 작은 함수로 분리하면 새 기능에서도 재사용하기 쉽다
+
+Phase 3 코드를 읽을 때는 "기능이 단순한데 왜 service를 거치지?"가 아니라, **입력 정규화와 에러 규약을 한 곳에 모으기 위해서**라고 이해하면 됩니다.
+
+---
+
+## 24. raw string literal과 긴 SQL 상수
+
+Go는 여러 줄 문자열을 backtick으로 표현할 수 있습니다.
+
+```go
+const companionSuggestionsQuery = `
+SELECT j.value AS companion, COUNT(*) AS cnt
+FROM coffee_logs l
+JOIN json_each(l.companions) j
+WHERE l.user_id = ?
+  AND (? = '' OR LOWER(j.value) LIKE '%' || LOWER(?) || '%')
+GROUP BY companion
+ORDER BY cnt DESC, companion ASC
+LIMIT 10
+`
+```
+
+Java 15+ text block과 비슷하지만 더 단순합니다.
+
+이 방식을 쓰는 이유:
+
+- SQL 줄바꿈을 거의 그대로 유지할 수 있다
+- `\n` 연결 없이 읽기 쉽다
+- DB에서 실제 실행되는 쿼리와 코드 상 문자열이 거의 동일하다
+
+Phase 3 repository를 읽을 때는 Go 문법보다도, **SQL을 코드 안에 어떻게 안전하게 고정하는지**를 함께 보는 것이 중요합니다.
+
+---
+
+## 25. 이 프로젝트에서 꼭 익혀야 할 Go 문법 우선순위
+
+Phase 1-3 코드를 리뷰하려면 아래 순서로 익히는 것이 가장 효율적입니다.
 
 1. `struct`
 2. `interface`
@@ -641,12 +784,15 @@ Phase 1-2 코드를 리뷰하려면 아래 순서로 익히는 것이 가장 효
 10. slice (`[]T`)
 11. `errors.Is`, `errors.As`
 12. `encoding/json`, `encoding/base64`
+13. `database/sql`의 `QueryContext`, `Rows`, `Scan`
+14. `strings.TrimSpace`, `len` 같은 입력 정규화 함수
+15. raw string literal로 작성된 멀티라인 SQL
 
-이 정도만 익혀도 repository/service/handler 흐름은 대부분 읽힙니다.
+이 정도만 익혀도 CRUD뿐 아니라 Phase 3 자동완성 흐름까지 대부분 읽힙니다.
 
 ---
 
-## 22. 실제 코드 읽기 추천 순서
+## 26. 실제 코드 읽기 추천 순서
 
 처음부터 repository 구현을 파고들기보다 아래 순서가 좋습니다.
 
@@ -660,7 +806,13 @@ Phase 1-2 코드를 리뷰하려면 아래 순서로 익히는 것이 가장 효
    DB 저장 방식 확인
 5. `backend/internal/repository/cursor.go`
    커서 직렬화 방식 확인
-6. `backend/cmd/server/main.go`
+6. `backend/internal/service/suggestion_service.go`
+   입력 정규화와 에러 전파 방식 확인
+7. `backend/internal/repository/suggestion_repository.go`
+   raw SQL + `sql.Rows` 패턴 확인
+8. `backend/internal/handler/suggestion_handler.go`
+   query string → service → JSON 응답 흐름 확인
+9. `backend/cmd/server/main.go`
    전체 조립 구조 확인
 
 이 순서가 Spring 개발자가 읽을 때 가장 자연스럽습니다.  
@@ -668,7 +820,7 @@ Controller → Service → Repository 순으로 내려가는 느낌이기 때문
 
 ---
 
-## 23. 마지막 정리
+## 27. 마지막 정리
 
 이 프로젝트의 Go 코드는 "Go다운 저수준 최적화"보다 **웹 서비스 레이어 구조를 명확히 나누는 방식**에 더 가깝습니다.  
 그래서 Java/Spring 경험이 있다면 문법만 익숙해지면 구조 자체는 오히려 낯설지 않습니다.
@@ -684,7 +836,13 @@ Phase 2부터는 여기에 두 가지가 더 중요해집니다.
 - 시간 값을 비교 가능한 문자열로 정규화하는 사고
 - 커서/필터 같은 인프라 규칙을 코드로 직접 다루는 방식
 
-이 흐름까지 이해하면 Phase 1-2 백엔드 코드는 훨씬 읽기 쉬워집니다.
+Phase 3부터는 여기에 세 가지가 더 붙습니다.
+
+- sqlc와 `database/sql`을 상황에 맞게 병행하는 방식
+- `Rows`를 직접 순회하며 응답 형태를 조립하는 방식
+- 작은 정규화 함수로 입력 규약을 재사용하는 방식
+
+이 흐름까지 이해하면 Phase 1-3 백엔드 코드는 훨씬 읽기 쉬워집니다.
 
 ---
 
