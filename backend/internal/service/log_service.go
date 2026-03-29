@@ -54,12 +54,19 @@ type UpdateLogRequest struct {
 	Brew       *domain.BrewDetail
 }
 
+// defaultTimezone은 날짜 필터의 기본 타임존이다.
+// 향후 사용자별 타임존을 지원하려면 ListLogsFilter.Timezone 필드에 값을 채우면 된다.
+const defaultTimezone = "Asia/Seoul"
+
 type ListLogsFilter struct {
 	LogType  *domain.LogType
 	DateFrom *string
 	DateTo   *string
 	Cursor   *string
 	Limit    int
+	// Timezone은 YYYY-MM-DD 날짜 필터를 UTC 경계로 변환할 때 사용하는 타임존이다.
+	// 빈 문자열이면 defaultTimezone(Asia/Seoul)을 사용한다.
+	Timezone string
 }
 
 type ListLogsResult struct {
@@ -372,9 +379,20 @@ func normalizeListFilter(filter ListLogsFilter) (repository.ListFilter, int, err
 		logTypeStr = &s
 	}
 
+	// 타임존 로드: YYYY-MM-DD 날짜 필터를 해당 타임존 기준 UTC 경계로 변환하기 위해 필요하다.
+	// Timezone이 지정되지 않으면 앱 기본값(Asia/Seoul)을 사용한다.
+	tz := filter.Timezone
+	if tz == "" {
+		tz = defaultTimezone
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		return repository.ListFilter{}, 0, newValidationError("timezone", "지원하지 않는 타임존입니다")
+	}
+
 	var fromTime time.Time
 	if filter.DateFrom != nil {
-		validated, parsed, err := validateDateFilter("date_from", *filter.DateFrom, false)
+		validated, parsed, err := validateDateFilter("date_from", *filter.DateFrom, false, loc)
 		if err != nil {
 			return repository.ListFilter{}, 0, err
 		}
@@ -384,7 +402,7 @@ func normalizeListFilter(filter ListLogsFilter) (repository.ListFilter, int, err
 
 	var toTime time.Time
 	if filter.DateTo != nil {
-		validated, parsed, err := validateDateFilter("date_to", *filter.DateTo, true)
+		validated, parsed, err := validateDateFilter("date_to", *filter.DateTo, true, loc)
 		if err != nil {
 			return repository.ListFilter{}, 0, err
 		}
@@ -581,32 +599,36 @@ func validateRecordedAt(value string) (string, error) {
 	if trimmed == "" {
 		return "", newValidationError("recorded_at", "필수값입니다")
 	}
-	if _, _, err := parseDateTime(trimmed); err != nil {
+	parsed, _, err := parseDateTime(trimmed)
+	if err != nil {
 		return "", newValidationError("recorded_at", "RFC3339 datetime 형식이어야 합니다")
 	}
-	return trimmed, nil
+	// SQLite 문자열 비교가 시각 순서와 일치하도록 UTC RFC3339Nano로 정규화한다.
+	// +09:00 등 오프셋 포함 입력이 섞이면 정렬과 커서 페이지네이션이 깨지므로 저장 전에 변환해야 한다.
+	return parsed.UTC().Format(time.RFC3339Nano), nil
 }
 
-// validateDateFilter는 날짜 필터 값을 검증하고 RFC3339 문자열로 정규화한다.
-// endOfDay=true이면 YYYY-MM-DD 입력을 당일 23:59:59Z로, false이면 00:00:00Z로 확장한다.
-// SQL 비교(recorded_at >= ?, recorded_at <= ?)가 RFC3339 문자열 간 비교이므로
-// date_to에 반드시 end-of-day 정규화가 필요하다.
-func validateDateFilter(field, value string, endOfDay bool) (string, time.Time, error) {
+// validateDateFilter는 날짜 필터 값을 검증하고 UTC RFC3339Nano 문자열로 정규화한다.
+// YYYY-MM-DD 입력은 loc 타임존 기준 하루 경계(00:00:00 또는 23:59:59.999)를 UTC로 변환한다.
+// RFC3339 입력은 UTC로 정규화하여 저장된 recorded_at(UTC)과 문자열 비교가 가능하게 한다.
+func validateDateFilter(field, value string, endOfDay bool, loc *time.Location) (string, time.Time, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
 		return "", time.Time{}, newValidationError(field, "빈 값일 수 없습니다")
 	}
 
-	// YYYY-MM-DD 형식인 경우 하루의 시작 또는 끝 시각으로 정규화한다
+	// YYYY-MM-DD 형식인 경우 loc 타임존 기준으로 하루의 경계를 구한 뒤 UTC로 변환한다.
+	// UTC 고정 대신 loc을 쓰는 이유: 한국 사용자가 2026-03-29를 입력하면 KST 기준
+	// 00:00~23:59 범위를 의미하므로, 서울 자정(UTC 전날 15:00)부터 잡아야 기록이 누락되지 않는다.
 	if d, err := time.Parse("2006-01-02", trimmed); err == nil {
 		var normalized time.Time
 		if endOfDay {
-			normalized = time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, 0, time.UTC)
+			normalized = time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, 999_000_000, loc)
 		} else {
-			normalized = time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
+			normalized = time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, loc)
 		}
-		s := normalized.Format(time.RFC3339)
-		return s, normalized, nil
+		utc := normalized.UTC()
+		return utc.Format(time.RFC3339Nano), utc, nil
 	}
 
 	parsed, _, err := parseDateTime(trimmed)
@@ -614,7 +636,10 @@ func validateDateFilter(field, value string, endOfDay bool) (string, time.Time, 
 		return "", time.Time{}, newValidationError(field, "RFC3339 datetime 또는 YYYY-MM-DD 형식이어야 합니다")
 	}
 
-	return trimmed, parsed, nil
+	// 저장된 recorded_at이 UTC RFC3339Nano로 정규화되므로, 필터 경계값도 같은 포맷으로 맞춰야
+	// 문자열 비교가 정확하게 동작한다.
+	utc := parsed.UTC()
+	return utc.Format(time.RFC3339Nano), utc, nil
 }
 
 func validateRoastDate(value *string) (*string, error) {

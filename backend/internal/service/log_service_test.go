@@ -325,29 +325,70 @@ func TestValidationError_UnwrapsToInvalidArgument(t *testing.T) {
 	assert.True(t, errors.Is(err, ErrInvalidArgument))
 }
 
-func TestValidateDateFilter_YYYYMMDDNormalization(t *testing.T) {
-	t.Run("date_from은 당일 00:00:00Z로 정규화된다", func(t *testing.T) {
-		s, parsed, err := validateDateFilter("date_from", "2026-03-29", false)
-		require.NoError(t, err)
-		assert.Equal(t, "2026-03-29T00:00:00Z", s)
-		assert.Equal(t, time.Date(2026, 3, 29, 0, 0, 0, 0, time.UTC), parsed)
-	})
-
-	t.Run("date_to는 당일 23:59:59Z로 정규화된다", func(t *testing.T) {
-		s, parsed, err := validateDateFilter("date_to", "2026-03-29", true)
-		require.NoError(t, err)
-		assert.Equal(t, "2026-03-29T23:59:59Z", s)
-		assert.Equal(t, time.Date(2026, 3, 29, 23, 59, 59, 0, time.UTC), parsed)
-	})
-
-	t.Run("RFC3339 입력은 그대로 통과한다", func(t *testing.T) {
-		s, _, err := validateDateFilter("date_from", "2026-03-29T09:00:00Z", false)
+func TestValidateRecordedAt_NormalizesToUTC(t *testing.T) {
+	t.Run("UTC 입력은 그대로 통과한다", func(t *testing.T) {
+		s, err := validateRecordedAt("2026-03-29T09:00:00Z")
 		require.NoError(t, err)
 		assert.Equal(t, "2026-03-29T09:00:00Z", s)
 	})
 
+	t.Run("오프셋 포함 입력은 UTC RFC3339Nano로 정규화된다", func(t *testing.T) {
+		// +09:00 오프셋: 2026-03-29T10:00:00+09:00 = 2026-03-29T01:00:00Z
+		// 정렬 기준 문자열이 시각 순서와 일치하도록 UTC로 변환해야 한다
+		s, err := validateRecordedAt("2026-03-29T10:00:00+09:00")
+		require.NoError(t, err)
+		assert.Equal(t, "2026-03-29T01:00:00Z", s)
+	})
+
+	t.Run("빈 값은 검증 에러를 반환한다", func(t *testing.T) {
+		_, err := validateRecordedAt("")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidArgument)
+	})
+
 	t.Run("잘못된 형식은 검증 에러를 반환한다", func(t *testing.T) {
-		_, _, err := validateDateFilter("date_from", "29/03/2026", false)
+		_, err := validateRecordedAt("2026-03-29")
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidArgument)
+	})
+}
+
+func TestValidateDateFilter_YYYYMMDDNormalization(t *testing.T) {
+	kst, err := time.LoadLocation("Asia/Seoul")
+	require.NoError(t, err)
+
+	t.Run("date_from은 KST 당일 자정을 UTC로 정규화한다", func(t *testing.T) {
+		// 2026-03-29T00:00:00+09:00 = 2026-03-28T15:00:00Z
+		s, parsed, err := validateDateFilter("date_from", "2026-03-29", false, kst)
+		require.NoError(t, err)
+		assert.Equal(t, "2026-03-28T15:00:00Z", s)
+		assert.Equal(t, time.Date(2026, 3, 28, 15, 0, 0, 0, time.UTC), parsed)
+	})
+
+	t.Run("date_to는 KST 당일 말미를 UTC로 정규화한다", func(t *testing.T) {
+		// 2026-03-29T23:59:59.999+09:00 = 2026-03-29T14:59:59.999Z
+		s, parsed, err := validateDateFilter("date_to", "2026-03-29", true, kst)
+		require.NoError(t, err)
+		assert.Equal(t, "2026-03-29T14:59:59.999Z", s)
+		assert.Equal(t, time.Date(2026, 3, 29, 14, 59, 59, 999_000_000, time.UTC), parsed)
+	})
+
+	t.Run("RFC3339 UTC 입력은 UTC로 정규화된다", func(t *testing.T) {
+		s, _, err := validateDateFilter("date_from", "2026-03-29T09:00:00Z", false, time.UTC)
+		require.NoError(t, err)
+		assert.Equal(t, "2026-03-29T09:00:00Z", s)
+	})
+
+	t.Run("RFC3339 오프셋 입력은 UTC로 정규화된다", func(t *testing.T) {
+		// +09:00 오프셋 입력: 2026-03-29T10:00:00+09:00 = 2026-03-29T01:00:00Z
+		s, parsed, err := validateDateFilter("date_from", "2026-03-29T10:00:00+09:00", false, time.UTC)
+		require.NoError(t, err)
+		assert.Equal(t, "2026-03-29T01:00:00Z", s)
+		assert.Equal(t, time.Date(2026, 3, 29, 1, 0, 0, 0, time.UTC), parsed)
+	})
+
+	t.Run("잘못된 형식은 검증 에러를 반환한다", func(t *testing.T) {
+		_, _, err := validateDateFilter("date_from", "29/03/2026", false, time.UTC)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, ErrInvalidArgument)
 	})
@@ -372,9 +413,11 @@ func TestListLogs_DateFilterNormalizesYYYYMMDD(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	// YYYY-MM-DD 입력이 SQL 비교에 사용할 RFC3339 경계값으로 정규화되었는지 확인
+	// YYYY-MM-DD 입력이 KST 기준 경계를 UTC RFC3339Nano로 변환했는지 확인
+	// 2026-03-01T00:00:00+09:00 = 2026-02-28T15:00:00Z
+	// 2026-03-29T23:59:59.999+09:00 = 2026-03-29T14:59:59.999Z
 	require.NotNil(t, capturedFilter.DateFrom)
 	require.NotNil(t, capturedFilter.DateTo)
-	assert.Equal(t, "2026-03-01T00:00:00Z", *capturedFilter.DateFrom)
-	assert.Equal(t, "2026-03-29T23:59:59Z", *capturedFilter.DateTo)
+	assert.Equal(t, "2026-02-28T15:00:00Z", *capturedFilter.DateFrom)
+	assert.Equal(t, "2026-03-29T14:59:59.999Z", *capturedFilter.DateTo)
 }

@@ -115,6 +115,14 @@ export default function HomePage() {
     [setSearchParams],
   )
 
+  const handleClearFilters = useCallback(() => {
+    setSearchParams({})
+  }, [setSearchParams])
+
+  // 필터가 하나라도 활성화된 상태인지 확인한다.
+  // 빈 상태 메시지를 "전체 데이터 없음"과 "필터 결과 없음"으로 분기하는 데 사용한다.
+  const hasActiveFilter = !!logType || !!dateFrom || !!dateTo
+
   return (
     <Layout
       title="커피 기록"
@@ -178,18 +186,36 @@ export default function HomePage() {
         ) : null}
 
         {!isLoading && !isError && logs.length === 0 ? (
-          <div className="rounded-[1.75rem] border border-dashed border-amber-900/25 bg-white/70 px-6 py-10 text-center">
-            <p className="text-lg font-semibold text-stone-900">첫 커피 기록을 남길 차례입니다.</p>
-            <p className="mt-2 text-sm leading-6 text-stone-600">
-              아직 저장된 로그가 없습니다. 카페에서 마신 한 잔이든, 집에서 내린 브루든 지금 바로 시작할 수 있습니다.
-            </p>
-            <Link
-              to="/logs/new"
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white"
-            >
-              Create first log
-            </Link>
-          </div>
+          hasActiveFilter ? (
+            // 필터 결과가 0건인 경우: 데이터가 없는 게 아니라 조건에 맞는 항목이 없는 것이다
+            <div className="rounded-[1.75rem] border border-dashed border-amber-900/25 bg-white/70 px-6 py-10 text-center">
+              <p className="text-lg font-semibold text-stone-900">조건에 맞는 기록이 없습니다.</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                선택한 필터에 해당하는 로그를 찾지 못했습니다. 필터를 바꾸거나 초기화해 보세요.
+              </p>
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="mt-6 inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-900"
+              >
+                필터 초기화
+              </button>
+            </div>
+          ) : (
+            // 기록이 한 건도 없는 첫 방문 상태
+            <div className="rounded-[1.75rem] border border-dashed border-amber-900/25 bg-white/70 px-6 py-10 text-center">
+              <p className="text-lg font-semibold text-stone-900">첫 커피 기록을 남길 차례입니다.</p>
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                아직 저장된 로그가 없습니다. 카페에서 마신 한 잔이든, 집에서 내린 브루든 지금 바로 시작할 수 있습니다.
+              </p>
+              <Link
+                to="/logs/new"
+                className="mt-6 inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white"
+              >
+                Create first log
+              </Link>
+            </div>
+          )
         ) : null}
 
         {!isLoading && logs.length > 0 ? (
