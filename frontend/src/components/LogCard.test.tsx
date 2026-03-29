@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { render, screen } from '@testing-library/react'
-import { LogCard } from './LogCard'
+import { LogCard, LogCardSkeleton } from './LogCard'
 import type { CoffeeLogFull } from '../types/log'
 
 describe('LogCard', () => {
@@ -80,5 +80,14 @@ describe('LogCard', () => {
     expect(screen.getByText('에티오피아 G1')).toBeInTheDocument()
     expect(screen.getByText('AeroPress · AeroPress Go')).toBeInTheDocument()
     expect(screen.getByText('혼자')).toBeInTheDocument()
+  })
+})
+
+describe('LogCardSkeleton', () => {
+  it('실제 카드와 동일한 컨테이너 형태로 렌더링된다', () => {
+    const { container } = render(<LogCardSkeleton />)
+    // 스켈레톤은 링크가 아닌 일반 div로 렌더링되어야 한다
+    expect(container.querySelector('a')).toBeNull()
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument()
   })
 })

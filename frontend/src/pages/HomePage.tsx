@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { FilterBar } from '../components/FilterBar'
 import { Layout } from '../components/Layout'
-import { LogCard } from '../components/LogCard'
+import { LogCard, LogCardSkeleton } from '../components/LogCard'
 import { useLogList } from '../hooks/useLogs'
 import type { LogType } from '../types/log'
 import type { ApiErrorLike } from '../types/common'
@@ -168,6 +168,16 @@ export default function HomePage() {
           </div>
         ) : null}
 
+        {/* 초기 로딩 중: 빈 상태 대신 스켈레톤 그리드를 표시하여 레이아웃 이동을 방지한다 */}
+        {isLoading ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <LogCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : null}
+
         {!isLoading && !isError && logs.length === 0 ? (
           <div className="rounded-[1.75rem] border border-dashed border-amber-900/25 bg-white/70 px-6 py-10 text-center">
             <p className="text-lg font-semibold text-stone-900">첫 커피 기록을 남길 차례입니다.</p>
@@ -183,33 +193,27 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {logs.length > 0 ? (
+        {!isLoading && logs.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {logs.map((log) => (
               <LogCard key={log.id} log={log} />
             ))}
+            {/* 다음 페이지 로딩 중: 그리드 하단에 스켈레톤 카드를 이어 붙인다 */}
+            {isFetchingNextPage
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  // eslint-disable-next-line react/no-array-index-key
+                  <LogCardSkeleton key={`skeleton-next-${i}`} />
+                ))
+              : null}
           </div>
         ) : null}
 
-        {hasNextPage ? (
-          <div className="space-y-3">
-            <div ref={sentinelRef} className="h-4" aria-hidden="true" />
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => void fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="rounded-full border border-amber-950/10 bg-white px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-amber-900/25 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isFetchingNextPage ? 'Loading more...' : 'Load more'}
-              </button>
-            </div>
-          </div>
-        ) : null}
+        {/* sentinel: hasNextPage일 때만 DOM에 존재하면 되므로 조건부 렌더링이 적절하다 */}
+        {hasNextPage ? <div ref={sentinelRef} className="h-1" aria-hidden="true" /> : null}
 
-        {!hasNextPage && logs.length > 0 ? (
+        {!hasNextPage && logs.length > 0 && !isLoading ? (
           <div className="rounded-[1.5rem] border border-amber-950/10 bg-stone-50/70 px-5 py-4 text-center text-sm text-stone-500">
-            현재 불러온 기록이 전부입니다.
+            더 이상 기록이 없습니다.
           </div>
         ) : null}
       </div>

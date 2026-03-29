@@ -35,6 +35,52 @@ function summarizeCompanions(companions: string[]) {
   return `${companions.slice(0, 2).join(', ')} +${companions.length - 2}`
 }
 
+// 로딩 중 레이아웃 이동(CLS) 없이 카드 자리를 채우는 스켈레톤 컴포넌트
+export function LogCardSkeleton() {
+  return (
+    <div className="flex h-full flex-col justify-between rounded-[1.75rem] border border-amber-950/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,239,229,0.9))] p-5 shadow-[0_16px_50px_rgba(72,44,17,0.08)]">
+      <div className="animate-pulse space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="h-5 w-14 rounded-full bg-amber-100" />
+            <div className="space-y-1.5">
+              <div className="h-6 w-36 rounded-lg bg-stone-200" />
+              <div className="h-4 w-24 rounded-lg bg-stone-100" />
+            </div>
+          </div>
+          <div className="h-5 w-16 rounded-full bg-stone-100" />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <div className="h-3 w-16 rounded bg-stone-100" />
+            <div className="h-4 w-28 rounded bg-stone-200" />
+          </div>
+          <div className="space-y-1.5">
+            <div className="h-3 w-8 rounded bg-stone-100" />
+            <div className="h-4 w-20 rounded bg-stone-200" />
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <div className="h-6 w-14 rounded-full bg-stone-100" />
+          <div className="h-6 w-20 rounded-full bg-stone-100" />
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="h-4 w-full rounded bg-stone-100" />
+          <div className="h-4 w-4/5 rounded bg-stone-100" />
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between border-t border-amber-950/10 pt-4">
+        <div className="h-4 w-10 animate-pulse rounded bg-stone-100" />
+        <div className="h-4 w-14 animate-pulse rounded bg-stone-100" />
+      </div>
+    </div>
+  )
+}
+
 export function LogCard({ log }: { log: CoffeeLogFull }) {
   const title = log.log_type === 'cafe' ? log.cafe.coffee_name : log.brew.bean_name
   const subtitle =
