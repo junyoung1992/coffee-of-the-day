@@ -81,43 +81,43 @@
 
 ### 1-6. Backend — Handler 및 미들웨어
 
-- [ ] `internal/handler/middleware.go` — `X-User-Id` 헤더 파싱 미들웨어 (POC)
-- [ ] `internal/handler/middleware.go` — CORS 미들웨어 (`localhost:5173` 허용)
-- [ ] `internal/handler/log_handler.go` — `POST /api/v1/logs`
-- [ ] `internal/handler/log_handler.go` — `GET /api/v1/logs`
-- [ ] `internal/handler/log_handler.go` — `GET /api/v1/logs/:id`
-- [ ] `internal/handler/log_handler.go` — `PUT /api/v1/logs/:id`
-- [ ] `internal/handler/log_handler.go` — `DELETE /api/v1/logs/:id`
-- [ ] `cmd/server/main.go` — 라우터에 핸들러·미들웨어 연결
+- [x] `internal/handler/middleware.go` — `X-User-Id` 헤더 파싱 미들웨어 (POC)
+- [x] `internal/handler/middleware.go` — CORS 미들웨어 (`localhost:5173` 허용)
+- [x] `internal/handler/log_handler.go` — `POST /api/v1/logs`
+- [x] `internal/handler/log_handler.go` — `GET /api/v1/logs`
+- [x] `internal/handler/log_handler.go` — `GET /api/v1/logs/:id`
+- [x] `internal/handler/log_handler.go` — `PUT /api/v1/logs/:id`
+- [x] `internal/handler/log_handler.go` — `DELETE /api/v1/logs/:id`
+- [x] `cmd/server/main.go` — 라우터에 핸들러·미들웨어 연결
 
 ---
 
 ### 1-7. Frontend — 타입 및 API 클라이언트
 
-- [ ] `src/types/log.ts` — `CoffeeLogBase`, `CafeDetail`, `BrewDetail`, `CafeLogFull`, `BrewLogFull`, `CoffeeLogFull` (Discriminated Union)
-- [ ] `src/types/common.ts` — `CursorPage<T>`, 공통 에러 타입
-- [ ] `src/api/logs.ts` — `getLogs`, `getLog`, `createLog`, `updateLog`, `deleteLog`
-- [ ] `src/hooks/useLogs.ts` — `useLogList` (`useInfiniteQuery`), `useLog`, `useCreateLog`, `useUpdateLog`, `useDeleteLog`
+- [x] `src/types/log.ts` — `CoffeeLogBase`, `CafeDetail`, `BrewDetail`, `CafeLogFull`, `BrewLogFull`, `CoffeeLogFull` (Discriminated Union)
+- [x] `src/types/common.ts` — `CursorPage<T>`, 공통 에러 타입
+- [x] `src/api/logs.ts` — `getLogs`, `getLog`, `createLog`, `updateLog`, `deleteLog`
+- [x] `src/hooks/useLogs.ts` — `useLogList` (`useInfiniteQuery`), `useLog`, `useCreateLog`, `useUpdateLog`, `useDeleteLog`
 
 ---
 
 ### 1-8. Frontend — 페이지 및 컴포넌트
 
 **공용 컴포넌트**
-- [ ] `src/components/Layout.tsx` — 공통 레이아웃 (헤더, 컨텐츠 영역)
-- [ ] `src/components/LogCard.tsx` — 목록에서 보이는 기록 카드 (cafe/brew 분기)
-- [ ] `src/components/RatingDisplay.tsx` — 0.5 단위 별점 표시
-- [ ] `src/components/RatingInput.tsx` — 0.5 단위 별점 입력
+- [x] `src/components/Layout.tsx` — 공통 레이아웃 (헤더, 컨텐츠 영역)
+- [x] `src/components/LogCard.tsx` — 목록에서 보이는 기록 카드 (cafe/brew 분기)
+- [x] `src/components/RatingDisplay.tsx` — 0.5 단위 별점 표시
+- [x] `src/components/RatingInput.tsx` — 0.5 단위 별점 입력
 
 **페이지**
-- [ ] `src/pages/HomePage.tsx` — 기록 카드 목록, 무한 스크롤 (`IntersectionObserver`)
-- [ ] `src/pages/LogDetailPage.tsx` — 기록 상세 보기 (cafe/brew 분기 렌더링)
-- [ ] `src/pages/LogFormPage.tsx` — 신규 작성 / 수정 통합 폼
-  - [ ] cafe/brew 탭 전환
-  - [ ] 공통 필드 섹션 (recorded_at, companions)
-  - [ ] 카페 전용 섹션
-  - [ ] 브루 전용 섹션 (brew_method 선택, 레시피 입력)
-  - [ ] `brew_steps` 동적 입력 (추가/삭제/위아래 버튼)
+- [x] `src/pages/HomePage.tsx` — 기록 카드 목록, 무한 스크롤 (`IntersectionObserver`)
+- [x] `src/pages/LogDetailPage.tsx` — 기록 상세 보기 (cafe/brew 분기 렌더링)
+- [x] `src/pages/LogFormPage.tsx` — 신규 작성 / 수정 통합 폼
+  - [x] cafe/brew 탭 전환
+  - [x] 공통 필드 섹션 (recorded_at, companions)
+  - [x] 카페 전용 섹션
+  - [x] 브루 전용 섹션 (brew_method 선택, 레시피 입력)
+  - [x] `brew_steps` 동적 입력 (추가/삭제/위아래 버튼)
 
 **Phase 1 완료 기준**
 - [ ] 브라우저에서 카페 기록 생성 후 목록에서 확인
@@ -210,4 +210,4 @@
 
 ---
 
-*Last updated: 2026-03-28*
+*Last updated: 2026-03-29*

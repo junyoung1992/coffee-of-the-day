@@ -9,3 +9,13 @@ export interface CursorPage<T> {
   next_cursor: string | null
   has_next: boolean
 }
+
+/**
+ * API 계층이 던지는 에러 객체의 최소 형태.
+ * UI는 이 형태만 알면 상태 코드와 메시지를 공통 처리할 수 있다.
+ */
+export interface ApiErrorLike {
+  message: string
+  status?: number
+  code?: string
+}
