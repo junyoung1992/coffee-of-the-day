@@ -1,5 +1,9 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 
+// refresh single-flight: 토큰 만료 시 동시에 여러 요청이 refresh를 중복 호출하지 않도록 한다.
+// 진행 중인 refresh Promise를 공유하여 refresh rotation 도입 시 race condition을 방지한다.
+let refreshPromise: Promise<void> | null = null
+
 export class ApiError extends Error {
   status: number
   code: string
@@ -29,12 +33,22 @@ async function requestInternal<T>(path: string, init: RequestInit, isRetry: bool
 
   if (res.status === 401 && !isRetry && !path.startsWith('/auth/')) {
     // 액세스 토큰 만료 시 리프레시 토큰으로 갱신을 시도한다.
-    // isRetry=true를 전달해 갱신 후에도 401이 나오면 무한 재시도를 막는다.
-    const refreshRes = await doFetch('/auth/refresh', { method: 'POST' })
-    if (refreshRes.ok) {
-      return requestInternal(path, init, true)
+    // 진행 중인 refresh가 있으면 같은 Promise를 await해 중복 호출을 방지한다.
+    if (!refreshPromise) {
+      refreshPromise = doFetch('/auth/refresh', { method: 'POST' })
+        .then((r) => {
+          if (!r.ok) throw new ApiError(401, 'UNAUTHORIZED', '세션이 만료되었습니다')
+        })
+        .finally(() => {
+          refreshPromise = null
+        })
     }
-    throw new ApiError(401, 'UNAUTHORIZED', '세션이 만료되었습니다')
+    try {
+      await refreshPromise
+      return requestInternal(path, init, true)
+    } catch {
+      throw new ApiError(401, 'UNAUTHORIZED', '세션이 만료되었습니다')
+    }
   }
 
   if (!res.ok) {

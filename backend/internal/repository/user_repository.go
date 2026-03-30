@@ -20,6 +20,7 @@ var (
 
 // UserRecord는 UserRepository가 반환하는 사용자 레코드다.
 // PasswordHash는 서비스 계층에서 bcrypt 검증 목적으로만 사용한다.
+// TokenVersion은 리프레시 토큰 무효화에 사용한다 — 로그아웃 시 증가시킨다.
 type UserRecord struct {
 	ID           string
 	Username     string
@@ -27,6 +28,7 @@ type UserRecord struct {
 	Email        *string
 	PasswordHash *string
 	CreatedAt    string
+	TokenVersion int64
 }
 
 // CreateUserParams는 사용자 생성 시 필요한 파라미터다.
@@ -43,6 +45,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, params CreateUserParams) (UserRecord, error)
 	GetUserByEmail(ctx context.Context, email string) (UserRecord, error)
 	GetUserByID(ctx context.Context, id string) (UserRecord, error)
+	IncrementTokenVersion(ctx context.Context, id string) error
 }
 
 // SQLiteUserRepository는 SQLite 기반 UserRepository 구현체다.
@@ -98,6 +101,10 @@ func (r *SQLiteUserRepository) GetUserByID(ctx context.Context, id string) (User
 	return dbUserToRecord(user), nil
 }
 
+func (r *SQLiteUserRepository) IncrementTokenVersion(ctx context.Context, id string) error {
+	return r.queries.IncrementTokenVersion(ctx, id)
+}
+
 func dbUserToRecord(u db.User) UserRecord {
 	return UserRecord{
 		ID:           u.ID,
@@ -106,5 +113,6 @@ func dbUserToRecord(u db.User) UserRecord {
 		Email:        u.Email,
 		PasswordHash: u.PasswordHash,
 		CreatedAt:    u.CreatedAt,
+		TokenVersion: u.TokenVersion,
 	}
 }

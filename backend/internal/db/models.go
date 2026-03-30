@@ -57,4 +57,5 @@ type User struct {
 	CreatedAt    string  `json:"created_at"`
 	Email        *string `json:"email"`
 	PasswordHash *string `json:"password_hash"`
+	TokenVersion int64   `json:"token_version"`
 }

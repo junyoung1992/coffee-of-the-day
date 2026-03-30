@@ -1,16 +1,27 @@
 import { expect, test } from '@playwright/test'
 
-// E2E 테스트는 매 실행마다 새 DB를 사용하므로 테스트 전에 사용자를 등록해야 한다.
+// E2E 테스트는 매 실행마다 새 DB를 사용하므로 beforeAll에서 사용자를 1회 등록한다.
+// beforeEach에서 매번 재가입을 시도하면 두 번째 테스트부터 이메일 중복 오류가 발생한다.
 const E2E_EMAIL = 'e2e@example.com'
 const E2E_PASSWORD = 'e2epassword123'
 const E2E_USERNAME = 'e2euser'
 
-test.beforeEach(async ({ page }) => {
+test.beforeAll(async ({ browser }) => {
+  const page = await browser.newPage()
   await page.goto('/register')
   await page.getByLabel('Email').fill(E2E_EMAIL)
   await page.getByLabel('Password').fill(E2E_PASSWORD)
   await page.getByLabel('Username').fill(E2E_USERNAME)
   await page.getByRole('button', { name: '회원가입' }).click()
+  await expect(page).toHaveURL('/')
+  await page.close()
+})
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/login')
+  await page.getByLabel('Email').fill(E2E_EMAIL)
+  await page.getByLabel('Password').fill(E2E_PASSWORD)
+  await page.getByRole('button', { name: '로그인' }).click()
   await expect(page).toHaveURL('/')
 })
 

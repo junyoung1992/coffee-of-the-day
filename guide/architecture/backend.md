@@ -251,21 +251,38 @@ userID := claims.Subject  // context에서 추출
 
 두 토큰 모두 동일한 비밀키로 서명되므로 `token_type` 클레임으로 혼용을 방지합니다. 리프레시 토큰을 액세스 토큰 자리에 사용하는 **토큰 혼용 공격(token confusion attack)**을 차단합니다.
 
-```go
-// JWTMiddleware에서 token_type 검증
-if claims.TokenType != "access" {
-    return "", fmt.Errorf("expected access token, got %q", claims.TokenType)
-}
-```
+**Refresh Token Revocation: token_version**
+
+순수 stateless JWT는 로그아웃 후에도 토큰이 만료 전까지 유효하다는 문제가 있습니다. 이를 해결하기 위해 `users.token_version` 컬럼을 도입했습니다.
+
+- 토큰 발급 시 현재 `token_version`을 클레임에 포함
+- Refresh 요청 시 DB의 `token_version`과 클레임 값을 비교 → 불일치 시 거부
+- 로그아웃 시 DB의 `token_version`을 증가 → 이전 발급된 리프레시 토큰 전부 무효화
+
+이 방식은 Spring Security의 `TokenStore`(토큰 직접 저장/삭제)보다 단순합니다. 정수 하나로 "현재 유효한 세대(generation)"를 표현합니다.
+
+**운영 환경 JWT_SECRET 강제**
+
+`config.Load()`는 `(Config, error)`를 반환하며, `GO_ENV=production`일 때 `JWT_SECRET`이 없거나 32바이트 미만이면 즉시 에러를 반환해 서버 시작을 막습니다. Spring Boot의 필수 `@Value` 속성 누락 시 `ApplicationContext` 로딩 실패와 같은 fail-fast 설계입니다.
+
+**Rate Limiting**
+
+`/auth/*` 라우트 그룹에 `go-chi/httprate`로 IP 기준 rate limit을 적용합니다(1분 20회). chi의 `r.Use()`로 해당 그룹에만 선택적으로 적용하는 방식은 Spring의 `FilterRegistrationBean`으로 URL 패턴을 지정하는 것과 같습니다.
+
+**이메일 정규화**
+
+`Register`와 `Login` 서비스 진입 시 `strings.ToLower(strings.TrimSpace(email))`을 적용합니다. 정규화를 저장 직전이 아닌 진입 시점에 적용해야 검증 기준과 저장 기준이 일치합니다.
 
 **레이어 구조**
 
 ```
-handler/auth_handler.go        ← HTTP 요청 파싱, 쿠키 설정/만료
+config/config.go               ← JWT_SECRET 강제 검증 (fail-fast)
+handler/auth_handler.go        ← HTTP 요청 파싱, 쿠키 설정/만료, token_version 증가 트리거
 handler/middleware.go          ← JWTMiddleware: 쿠키 검증 → context에 userID 주입
-service/auth_service.go        ← 비밀번호 검증(bcrypt), JWT 생성/파싱
-repository/user_repository.go  ← users 테이블 CRUD (sqlc)
+service/auth_service.go        ← 비밀번호 검증(bcrypt), JWT 생성/파싱, 이메일 정규화, revocation
+repository/user_repository.go  ← users 테이블 CRUD, IncrementTokenVersion (sqlc)
 db/migrations/005_*.sql        ← email, password_hash 컬럼 추가
+db/migrations/006_*.sql        ← token_version 컬럼 추가
 ```
 
 **CORS와 쿠키**
@@ -274,4 +291,4 @@ db/migrations/005_*.sql        ← email, password_hash 컬럼 추가
 
 ---
 
-*Last updated: 2026-03-30 (Phase 4 JWT 인증 반영)*
+*Last updated: 2026-03-30 (Phase 4 리팩토링 — token_version revocation, rate limiting, email 정규화, JWT_SECRET 강제 반영)*

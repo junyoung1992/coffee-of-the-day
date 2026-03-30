@@ -283,6 +283,7 @@ POST /api/v1/auth/logout
 |------|------|------|
 | Backend 언어 | Go | 1.22+ |
 | HTTP 라우터 | chi | v5 |
+| Rate limiting | go-chi/httprate | v0.15+ |
 | DB | SQLite | — |
 | SQLite 드라이버 | mattn/go-sqlite3 | — |
 | 쿼리 생성 | sqlc | v1 |
@@ -313,4 +314,4 @@ npm run dev
 
 ---
 
-*Last updated: 2026-03-30 (Phase 4 완료)*
+*Last updated: 2026-03-30 (Phase 4 리팩토링 완료)*

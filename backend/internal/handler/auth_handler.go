@@ -117,8 +117,13 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 }
 
 // Logout은 POST /api/v1/auth/logout을 처리한다.
-// 쿠키를 만료시켜 클라이언트 측 토큰을 무효화한다.
+// token_version을 증가시켜 서버 측 리프레시 토큰을 무효화하고, 쿠키를 만료시킨다.
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	// 리프레시 토큰 쿠키에서 userID를 추출해 token_version을 증가시킨다.
+	// 쿠키가 없거나 토큰 파싱에 실패해도 쿠키 만료는 항상 수행한다.
+	if cookie, err := r.Cookie("refresh_token"); err == nil {
+		_ = h.svc.Logout(r.Context(), cookie.Value)
+	}
 	h.clearAuthCookies(w)
 	w.WriteHeader(http.StatusNoContent)
 }

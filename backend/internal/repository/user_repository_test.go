@@ -10,16 +10,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// setupUserTestDB는 005 마이그레이션(email, password_hash 컬럼)까지 적용된 DB를 반환한다.
-// 기존 setupTestDB(001~004)를 재사용하고 005를 추가로 실행한다.
+// setupUserTestDB는 006 마이그레이션(token_version 컬럼)까지 적용된 DB를 반환한다.
 func setupUserTestDB(t *testing.T) *SQLiteUserRepository {
 	t.Helper()
 	db := setupTestDB(t)
 
-	migration005, err := os.ReadFile(filepath.Join("..", "..", "db", "migrations", "005_add_auth_to_users.up.sql"))
-	require.NoError(t, err)
-	_, err = db.Exec(string(migration005))
-	require.NoError(t, err)
+	for _, file := range []string{
+		"005_add_auth_to_users.up.sql",
+		"006_add_token_version_to_users.up.sql",
+	} {
+		migration, err := os.ReadFile(filepath.Join("..", "..", "db", "migrations", file))
+		require.NoError(t, err)
+		_, err = db.Exec(string(migration))
+		require.NoError(t, err)
+	}
 
 	return NewSQLiteUserRepository(db)
 }

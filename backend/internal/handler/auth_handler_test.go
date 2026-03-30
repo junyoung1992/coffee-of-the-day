@@ -20,6 +20,7 @@ type stubAuthService struct {
 	registerFunc func(ctx context.Context, req domain.RegisterRequest) (domain.AuthUser, service.AuthTokens, error)
 	loginFunc    func(ctx context.Context, req domain.LoginRequest) (domain.AuthUser, service.AuthTokens, error)
 	refreshFunc  func(ctx context.Context, refreshToken string) (service.AuthTokens, error)
+	logoutFunc   func(ctx context.Context, refreshToken string) error
 	getUserFunc  func(ctx context.Context, userID string) (domain.AuthUser, error)
 }
 
@@ -31,6 +32,12 @@ func (s *stubAuthService) Login(ctx context.Context, req domain.LoginRequest) (d
 }
 func (s *stubAuthService) Refresh(ctx context.Context, refreshToken string) (service.AuthTokens, error) {
 	return s.refreshFunc(ctx, refreshToken)
+}
+func (s *stubAuthService) Logout(ctx context.Context, refreshToken string) error {
+	if s.logoutFunc != nil {
+		return s.logoutFunc(ctx, refreshToken)
+	}
+	return nil
 }
 func (s *stubAuthService) GetUser(ctx context.Context, userID string) (domain.AuthUser, error) {
 	return s.getUserFunc(ctx, userID)

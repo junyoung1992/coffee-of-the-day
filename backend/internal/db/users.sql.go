@@ -12,7 +12,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, username, display_name, email, password_hash, created_at)
 VALUES (?, ?, ?, ?, ?, ?)
-RETURNING id, username, display_name, created_at, email, password_hash
+RETURNING id, username, display_name, created_at, email, password_hash, token_version
 `
 
 type CreateUserParams struct {
@@ -41,12 +41,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TokenVersion,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, display_name, created_at, email, password_hash FROM users WHERE email = ?
+SELECT id, username, display_name, created_at, email, password_hash, token_version FROM users WHERE email = ?
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, error) {
@@ -59,12 +60,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email *string) (User, erro
 		&i.CreatedAt,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TokenVersion,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, display_name, created_at, email, password_hash FROM users WHERE id = ?
+SELECT id, username, display_name, created_at, email, password_hash, token_version FROM users WHERE id = ?
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
@@ -77,6 +79,16 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 		&i.CreatedAt,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TokenVersion,
 	)
 	return i, err
+}
+
+const incrementTokenVersion = `-- name: IncrementTokenVersion :exec
+UPDATE users SET token_version = token_version + 1 WHERE id = ?
+`
+
+func (q *Queries) IncrementTokenVersion(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, incrementTokenVersion, id)
+	return err
 }

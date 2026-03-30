@@ -80,6 +80,7 @@ paths:
     post:
       summary: 로그아웃
       tags: [auth]
+      security: []
       responses:
         '204':
           description: 로그아웃 성공 (토큰 쿠키 만료 처리)

@@ -137,14 +137,20 @@ export function useCurrentUser() {
 
 Phase 4에서 인증이 추가되면서 `ProtectedRoute` 패턴이 도입됐습니다. 인증이 필요한 라우트를 하나의 부모 요소로 감싸는 방식입니다.
 
+`ProtectedRoute`는 `src/components/ProtectedRoute.tsx`에 독립 파일로 분리되어 있습니다. `react-refresh/only-export-components` 규칙에 따라 컴포넌트와 라우터 설정 객체를 같은 파일에서 export하면 HMR(Hot Module Replacement)이 전체 모듈을 리로드하기 때문입니다.
+
 ```tsx
-function ProtectedRoute() {
+// src/components/ProtectedRoute.tsx
+export default function ProtectedRoute() {
   const { data: user, isLoading, isError } = useCurrentUser()
 
   if (isLoading) return null          // 깜빡임 방지
   if (isError || !user) return <Navigate to="/login" replace />
   return <Outlet />                   // 자식 라우트 렌더링
 }
+
+// src/router.tsx
+import ProtectedRoute from './components/ProtectedRoute'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -193,6 +199,24 @@ src/
 - `hooks/`: TanStack Query 훅. React 컴포넌트에서 사용. 캐싱·에러·로딩 상태 포함.
 
 이렇게 분리하면 `api/`를 테스트할 때 React 환경이 필요 없고, 나중에 TanStack Query를 다른 라이브러리로 교체하더라도 `api/`는 손대지 않아도 됩니다.
+
+**Refresh Single-Flight**
+
+`api/client.ts`의 자동 토큰 갱신 인터셉터는 single-flight 패턴을 사용합니다. 액세스 토큰 만료 시 여러 API 요청이 동시에 401을 받으면, 각 요청이 독립적으로 `/auth/refresh`를 호출하는 대신 모듈 스코프의 `refreshPromise`를 공유합니다.
+
+```typescript
+let refreshPromise: Promise<void> | null = null
+
+// 401 수신 시
+if (!refreshPromise) {
+  refreshPromise = doFetch('/auth/refresh', { method: 'POST' })
+    .then(...)
+    .finally(() => { refreshPromise = null })
+}
+await refreshPromise  // 이미 진행 중이면 같은 Promise를 기다림
+```
+
+서버가 refresh rotation(이전 토큰 무효화)을 도입하면 중복 refresh 요청은 race condition으로 이어지므로, 이 패턴이 필수적입니다. Go의 `sync/singleflight`와 동일한 개념이며, JavaScript `Promise`가 이미 완료된 뒤에도 `await`할 수 있는 특성 덕분에 자연스럽게 구현됩니다.
 
 ---
 
@@ -250,4 +274,4 @@ if (log.log_type === 'cafe') {
 
 ---
 
-*Last updated: 2026-03-30 (Phase 4 인증 UI — ProtectedRoute, TanStack Query 인증 상태 관리 반영)*
+*Last updated: 2026-03-30 (Phase 4 리팩토링 — ProtectedRoute 파일 분리, refresh single-flight 반영)*

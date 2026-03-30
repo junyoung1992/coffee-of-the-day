@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
 	"github.com/golang-migrate/migrate/v4"
 	migratesqlite3 "github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -20,7 +22,10 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("설정 오류: %v", err)
+	}
 
 	// _foreign_keys=on: SQLite는 연결마다 외래키 강제를 별도로 활성화해야 한다.
 	db, err := sql.Open("sqlite3", cfg.DBPath+"?_foreign_keys=on")
@@ -62,7 +67,9 @@ func main() {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		// 인증 불필요 라우트: 회원가입·로그인·토큰 갱신·로그아웃
+		// rate limit: IP 기준 1분에 20회 초과 시 429 반환 (brute-force 방어)
 		r.Route("/auth", func(r chi.Router) {
+			r.Use(httprate.LimitByIP(20, 1*time.Minute))
 			r.Post("/register", authHandler.Register)
 			r.Post("/login", authHandler.Login)
 			r.Post("/refresh", authHandler.Refresh)
