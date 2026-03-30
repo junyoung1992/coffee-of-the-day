@@ -47,6 +47,7 @@ Read these files only when relevant to the task at hand — do not read them pre
 - `docs/openapi.yml`: the single source of truth for the API contract
 - `docs/arch/backend.md`: consult for backend architecture rationale and dependency decisions
 - `docs/arch/frontend.md`: consult for frontend architecture rationale and dependency decisions
+- `docs/backlog.md`: open work — security, testing, technical debt, and features; consult when the issue is related to backlog items
 
 ### Issue-scoped (read from the active issue's directory)
 

@@ -93,6 +93,7 @@ npm run test:e2e
 
 - [`docs/spec.md`](./docs/spec.md): 기능 명세
 - [`docs/openapi.yml`](./docs/openapi.yml): API 명세
+- [`docs/backlog.md`](./docs/backlog.md): 미완성 작업 목록 (security, testing, 기술 부채, 기능)
 - [`docs/arch/`](./docs/arch): 아키텍처 문서
 - [`docs/lang/`](./docs/lang): 언어 학습 가이드
 - [`docs/issues/`](./docs/issues): 이슈별 개발 산출물 (plan, tasks, review, phase 가이드)
