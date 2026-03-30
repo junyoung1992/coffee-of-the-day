@@ -44,19 +44,19 @@ Coffee of the Day는 그 사이를 목표로 합니다.
 
 | Layer | Stack |
 |------|-------|
-| Backend | Go, chi, sqlc, SQLite, golang-migrate |
-| Frontend | React, TypeScript, Vite, TanStack Query, React Router, Tailwind CSS v4 |
+| Backend | Go, chi, sqlc, SQLite |
+| Frontend | React, TypeScript, Vite, TanStack Query, Tailwind CSS |
 | Auth | JWT, httpOnly Cookie |
-| API | OpenAPI 3.0 |
+| Infra | Docker, Fly.io, Litestream, GitHub Actions |
 | Test | Go testing, Vitest, Playwright |
+| API Spec | OpenAPI 3.0 |
 
 ## Run Locally
 
 ### Backend
 
 ```bash
-cd backend
-go run ./cmd/server
+go run ./backend/cmd/server
 ```
 
 기본 주소: `http://localhost:8080`
@@ -69,24 +69,19 @@ npm install
 npm run dev
 ```
 
-기본 주소: `http://localhost:5173`
+기본 주소: `http://localhost:5173` (Vite proxy로 `/api` → `localhost:8080` 자동 전달)
 
 ## Test
 
 ```bash
-cd backend
+# Backend
 go test ./...
-```
 
-```bash
-cd frontend
-npm test
-```
+# Frontend unit
+cd frontend && npm test
 
-```bash
-cd frontend
-npm run test:e2e:install
-npm run test:e2e
+# Frontend E2E
+cd frontend && npm run test:e2e
 ```
 
 ## Documents
@@ -97,6 +92,7 @@ npm run test:e2e
 - [`docs/arch/`](./docs/arch): 아키텍처 문서
 - [`docs/lang/`](./docs/lang): 언어 학습 가이드
 - [`docs/issues/`](./docs/issues): 이슈별 개발 산출물 (plan, tasks, review, phase 가이드)
+- [`docs/postmortems/`](./docs/postmortems): 장애 및 디버깅 회고 문서
 
 ## Built With AI
 

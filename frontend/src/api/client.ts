@@ -1,4 +1,7 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
+// VITE_API_BASE_URL이 빈 문자열이면 상대경로를 사용한다.
+// 로컬: Vite 프록시가 /api/v1 → localhost:8080으로 전달한다.
+// 운영: Go 서버가 동일 origin에서 /api/v1을 직접 처리한다.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
 // refresh single-flight: 토큰 만료 시 동시에 여러 요청이 refresh를 중복 호출하지 않도록 한다.
 // 진행 중인 refresh Promise를 공유하여 refresh rotation 도입 시 race condition을 방지한다.

@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    # 로컬 검증 시에는 Litestream 없이 바이너리를 직접 실행한다.
+    # 운영 환경(Fly.io)에서는 Dockerfile의 CMD(litestream replicate -exec)가 사용된다.
+    command: ["./server"]
+    environment:
+      - GO_ENV=production
+      - JWT_SECRET=local-docker-dev-secret-change-in-production
+      - DB_PATH=/data/coffee.db
+    volumes:
+      - ./data:/data

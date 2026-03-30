@@ -57,18 +57,22 @@ func UserIDMiddleware(next http.Handler) http.Handler {
 | 동시성 | 쓰기 락 있음 (POC엔 무관) | 높은 동시성 지원 |
 | 이식성 | DB 파일을 그대로 복사해 이동 가능 | — |
 
-POC에서 단일 사용자 / 로컬 실행이라는 전제 조건에서 SQLite는 "설정 없이 바로 시작"할 수 있는 최선의 선택입니다. 이후 사용자가 늘어나거나 서버 배포가 필요해지면 PostgreSQL로 교체합니다.
+POC에서 단일 사용자라는 전제 조건에서 SQLite는 "설정 없이 바로 시작"할 수 있는 최선의 선택입니다. 현재 Fly.io에 배포된 상태에서도 단일 인스턴스 + 볼륨 구조로 잘 동작합니다. 사용자가 늘어나 동시 쓰기가 병목이 되면 PostgreSQL로 교체합니다.
+
+**WAL 모드**
+
+SQLite의 기본 저널 모드(delete)는 쓰기 시 전체 DB를 잠그지만, WAL(Write-Ahead Logging) 모드는 읽기와 쓰기가 동시에 가능합니다. 또한 Litestream은 WAL 파일을 tail하는 방식으로 복제하므로, Litestream 사용 시 WAL 모드는 필수입니다.
+
+```go
+// DSN에서 WAL 모드와 외래키를 함께 활성화
+db, err := sql.Open("sqlite3", cfg.DBPath+"?_foreign_keys=on&_journal_mode=WAL")
+```
 
 **SQLite의 외래키 비활성화 기본값**
 
 SQLite는 연결을 열어도 외래키 강제가 기본으로 꺼져 있습니다. `PRAGMA foreign_keys = ON`을 명시적으로 실행하지 않으면 스키마에 `REFERENCES`와 `ON DELETE CASCADE`를 선언해도 아무 효과가 없습니다.
 
-이 프로젝트에서는 DSN 수준에서 활성화합니다.
-
-```go
-// connection pool의 모든 연결에 일괄 적용된다
-db, err := sql.Open("sqlite3", cfg.DBPath+"?_foreign_keys=on")
-```
+이 프로젝트에서는 DSN 수준에서 활성화합니다 (위의 WAL 모드 설정과 함께).
 
 코드로 `PRAGMA foreign_keys = ON`을 직접 실행하면 pool에서 해당 연결 하나에만 적용되어 다른 연결에서는 여전히 꺼진 상태가 될 수 있습니다. DSN 파라미터 방식이 안전합니다.
 
@@ -151,6 +155,22 @@ db/migrations/
 - `.down.sql`: 롤백
 
 대안으로 `goose`도 있지만, golang-migrate는 SQL 파일을 그대로 사용하고 Go 코드에 의존하지 않아서 DB 도구로 직접 SQL을 실행하는 것과 동일한 결과를 보장합니다.
+
+**마이그레이션 소스: embed + iofs**
+
+초기에는 `file://db/migrations` 경로로 파일 시스템을 직접 참조했지만, 컨테이너 배포 환경에서는 실행 위치에 의존하는 경로가 깨질 수 있습니다. 이를 해결하기 위해 마이그레이션 파일을 `//go:embed`로 바이너리에 포함하고, `iofs` 드라이버로 읽습니다.
+
+```go
+// backend/db/embed.go
+//go:embed all:migrations
+var MigrationsFS embed.FS
+
+// backend/cmd/server/main.go
+src, err := iofs.New(coffeedb.MigrationsFS, "migrations")
+m, err := migrate.NewWithInstance("iofs", src, "sqlite3", driver)
+```
+
+이렇게 하면 바이너리 하나에 마이그레이션 파일이 포함되어, 어디서 실행하든 동일하게 동작합니다.
 
 ---
 
@@ -291,4 +311,55 @@ db/migrations/006_*.sql        ← token_version 컬럼 추가
 
 ---
 
-*Last updated: 2026-03-30 (Phase 4 리팩토링 — token_version revocation, rate limiting, email 정규화, JWT_SECRET 강제 반영)*
+## 배포 아키텍처: 단일 바이너리 + Fly.io
+
+**결정**: Go embed로 프론트엔드를 바이너리에 포함, Fly.io에 단일 앱으로 배포.
+
+### 프론트엔드 embed 서빙
+
+`//go:embed`로 React 빌드 결과물을 Go 바이너리에 포함합니다. 운영 환경에서는 단일 origin(`https://coffee-of-the-day.fly.dev`)으로 API와 SPA를 함께 서빙하므로 CORS가 불필요합니다.
+
+```
+web/fs.go        ← //go:embed all:static (Vite 빌드 결과물)
+web/static/      ← Vite outDir (../web/static)
+```
+
+`web.Handler()`는 요청 경로에 해당하는 파일이 있으면 정적 파일을 서빙하고, 없으면 `index.html`로 fallback합니다 (SPA 라우팅).
+
+**왜 `web/` 패키지가 루트에 있는가**: `//go:embed`는 선언 파일 기준 상대 경로만 허용하고 `..`가 불가합니다. `backend/cmd/server/`에서 `frontend/dist/`에 접근할 수 없으므로, 루트에 얇은 `web` 패키지를 두고 `main.go`에서 import합니다.
+
+### Graceful Shutdown
+
+컨테이너 환경에서 SIGTERM(배포 교체, `docker stop`)과 SIGINT(Ctrl+C)를 수신해, 진행 중인 요청을 완료한 후 서버를 종료합니다.
+
+```go
+quit := make(chan os.Signal, 1)
+signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+<-quit
+srv.Shutdown(ctx)  // 타임아웃 30초
+db.Close()
+```
+
+### Fly.io 인프라
+
+| 항목 | 설정 |
+|------|------|
+| 리전 | `nrt` (도쿄) |
+| 머신 | shared-cpu-1x, 256MB |
+| 볼륨 | 1GB (`coffee_data` → `/data`) |
+| DB 경로 | `/data/coffee.db` |
+| Scale-to-zero | `auto_stop_machines = 'stop'` (트래픽 없으면 머신 정지) |
+| Health check | `GET /health` (30초 간격) |
+
+### SQLite 백업: Litestream
+
+Litestream은 SQLite WAL 파일을 오브젝트 스토리지(S3 호환)에 실시간 복제합니다. Dockerfile의 기본 CMD에서 `litestream replicate -exec ./server`로 앱 프로세스를 래핑 실행합니다. 현재는 Litestream 없이 배포 중이며, 오브젝트 스토리지 설정 후 활성화 예정입니다.
+
+### CI/CD
+
+- **CI** (`.github/workflows/ci.yml`): PR 시 `go test ./...` + `npm test` 실행. E2E는 CI 비용 효율을 위해 로컬에서 PR 전 수동 실행.
+- **Deploy** (`.github/workflows/deploy.yml`): `main` 푸시 → CI 통과 → `fly deploy --remote-only`.
+
+---
+
+*Last updated: 2026-03-30 (Issue #1 — Fly.io 배포 파이프라인, WAL, graceful shutdown, embed, CI/CD 반영)*

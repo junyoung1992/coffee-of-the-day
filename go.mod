@@ -1,4 +1,4 @@
-module coffee-of-the-day/backend
+module coffee-of-the-day
 
 go 1.25.5
 

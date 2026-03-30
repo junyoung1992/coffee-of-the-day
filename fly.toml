@@ -1,0 +1,41 @@
+# fly.toml app configuration file generated for coffee-of-the-day on 2026-03-30T16:12:20+09:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'coffee-of-the-day'
+primary_region = 'nrt'
+
+[build]
+
+[env]
+  DB_PATH = '/data/coffee.db'
+  GO_ENV = 'production'
+
+[processes]
+  app = './server'
+
+[[mounts]]
+  source = 'coffee_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256

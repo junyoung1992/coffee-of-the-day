@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -12,13 +16,15 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/golang-migrate/migrate/v4"
 	migratesqlite3 "github.com/golang-migrate/migrate/v4/database/sqlite3"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
 
+	coffeedb "coffee-of-the-day/backend/db"
 	"coffee-of-the-day/backend/config"
 	"coffee-of-the-day/backend/internal/handler"
 	"coffee-of-the-day/backend/internal/repository"
 	"coffee-of-the-day/backend/internal/service"
+	"coffee-of-the-day/web"
 )
 
 func main() {
@@ -28,7 +34,8 @@ func main() {
 	}
 
 	// _foreign_keys=on: SQLite는 연결마다 외래키 강제를 별도로 활성화해야 한다.
-	db, err := sql.Open("sqlite3", cfg.DBPath+"?_foreign_keys=on")
+	// _journal_mode=WAL: 읽기/쓰기 동시성을 높이고, Litestream 복제에 필수다.
+	db, err := sql.Open("sqlite3", cfg.DBPath+"?_foreign_keys=on&_journal_mode=WAL")
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
@@ -57,8 +64,6 @@ func main() {
 
 	// CORS는 전역으로 적용: OPTIONS preflight가 JWTMiddleware에 도달하지 않도록
 	r.Use(handler.CORSMiddleware)
-
-	r.Options("/*", func(w http.ResponseWriter, r *http.Request) {})
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -98,11 +103,39 @@ func main() {
 		})
 	})
 
+	// /api/v1 이외의 모든 경로를 React SPA로 fallback한다.
+	// CORSMiddleware가 OPTIONS를 미리 처리하므로 r.Options("/*", ...) 없이도 preflight가 동작한다.
+	r.Handle("/*", web.Handler())
+
 	addr := ":" + cfg.Port
-	log.Printf("server listening on %s", addr)
-	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatalf("server error: %v", err)
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: r,
 	}
+
+	// 별도 고루틴에서 서버를 시작해 메인 고루틴이 시그널 수신을 기다릴 수 있도록 한다.
+	go func() {
+		log.Printf("server listening on %s", addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	// SIGTERM(컨테이너 종료), SIGINT(Ctrl+C) 수신 대기
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+	log.Println("shutting down server...")
+
+	// 진행 중인 요청이 완료될 때까지 최대 30초 대기
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("server forced to shutdown: %v", err)
+	}
+
+	log.Println("server exited")
 }
 
 func runMigrations(db *sql.DB) error {
@@ -111,7 +144,13 @@ func runMigrations(db *sql.DB) error {
 		return fmt.Errorf("create migration driver: %w", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://db/migrations", "sqlite3", driver)
+	// iofs 소스: embed된 SQL 파일을 사용해 실행 위치에 무관하게 마이그레이션을 실행한다.
+	src, err := iofs.New(coffeedb.MigrationsFS, "migrations")
+	if err != nil {
+		return fmt.Errorf("create migration source: %w", err)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", src, "sqlite3", driver)
 	if err != nil {
 		return fmt.Errorf("create migrator: %w", err)
 	}
