@@ -274,4 +274,46 @@ if (log.log_type === 'cafe') {
 
 ---
 
-*Last updated: 2026-03-30 (Phase 4 리팩토링 — ProtectedRoute 파일 분리, refresh single-flight 반영)*
+## 환경 변수와 API 접근 전략
+
+**결정**: 모든 환경에서 상대 경로(`/api/v1`)를 기본으로 사용.
+
+### 운영 환경 (Fly.io)
+
+Go 바이너리가 React SPA를 embed해 동일 origin에서 서빙합니다. 브라우저 입장에서 API 호출이 같은 origin으로 나가므로 CORS가 불필요하고, 쿠키도 자연스럽게 전송됩니다.
+
+```
+브라우저 → https://coffee-of-the-day.fly.dev/        (SPA)
+        → https://coffee-of-the-day.fly.dev/api/v1   (API, 동일 origin)
+```
+
+### 로컬 개발 환경
+
+Vite dev server(`localhost:5173`)와 Go 서버(`localhost:8080`)가 별도 포트에서 실행됩니다. Vite proxy가 `/api` 요청을 Go 서버로 전달해 브라우저에서는 동일 origin처럼 동작합니다.
+
+```ts
+// vite.config.ts
+server: {
+  proxy: {
+    '/api': 'http://localhost:8080',
+  },
+},
+```
+
+### 환경 변수
+
+`frontend/.env`에 기본값을 설정하고, 환경별 파일은 사용하지 않습니다.
+
+```
+VITE_API_BASE_URL=/api/v1
+```
+
+`client.ts`에서 빈 문자열 fallback을 위해 `??` 대신 `||`를 사용합니다. Vite는 미설정 환경변수를 빈 문자열로 치환하기 때문에 `??`는 빈 문자열을 통과시킵니다.
+
+```ts
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+```
+
+---
+
+*Last updated: 2026-03-30 (Issue #1 — Vite proxy, 환경 변수 전략, single-origin 서빙 반영)*

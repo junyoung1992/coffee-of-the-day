@@ -71,13 +71,12 @@
 
 ## Phase 5 — GitHub Actions CI/CD
 
-- [ ] **CI 워크플로우** (`.github/workflows/ci.yml`)
-  - 트리거: PR
+- [x] **CI 워크플로우** (`.github/workflows/ci.yml`)
+  - 트리거: PR, workflow_call
   - `backend-test`: `go test ./...`
-  - `frontend-test`: `npm test` (unit) + `npm run test:e2e` (E2E)
-    - E2E 실행 전 `npx playwright install --with-deps chromium` 단계 포함
-- [ ] **배포 워크플로우** (`.github/workflows/deploy.yml`)
+  - `frontend-unit-test`: `npm test` (unit only, E2E는 로컬에서 PR 전 수동 실행)
+- [x] **배포 워크플로우** (`.github/workflows/deploy.yml`)
   - 트리거: `main` 브랜치 푸시
   - CI 통과 후 `fly deploy --remote-only`
-- [ ] **GitHub Secrets 등록**: `FLY_API_TOKEN`
+- [x] **GitHub Secrets 등록**: `FLY_API_TOKEN` (`fly launch` 시 자동 등록됨)
 - [ ] **자동 배포 확인**: `main` 푸시 → CI → 배포 전 과정 확인

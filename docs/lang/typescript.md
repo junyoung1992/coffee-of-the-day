@@ -1,7 +1,7 @@
-# TypeScript 학습 가이드 — Phase 1-3 코드 따라가기
+# TypeScript 학습 가이드 — 프로젝트 코드 따라가기
 
-> 대상 독자: Java/Spring 개발자  
-> 목표: Coffee of the Day Phase 1-3 프론트 코드를 읽을 때 필요한 TypeScript와 React 문법을 빠르게 익힌다.
+> 대상 독자: Java/Spring 개발자
+> 목표: Coffee of the Day 프론트 코드를 읽을 때 필요한 TypeScript와 React 문법을 빠르게 익힌다.
 
 ---
 

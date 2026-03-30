@@ -108,7 +108,7 @@ Available test scripts (run inside `frontend/`):
 | Script | Command | When to run |
 |--------|---------|-------------|
 | Unit tests | `npm test` | After any component, hook, or utility change |
-| E2E tests | `npm run test:e2e` | After any user-facing flow change (auth, CRUD, navigation) |
+| E2E tests | `npm run test:e2e` | Run locally before creating a PR (not included in CI) |
 | Type generation | `npm run generate` | After `docs/openapi.yml` changes |
 
 ## Documentation
