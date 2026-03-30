@@ -97,6 +97,7 @@ npm run test:e2e
 - [`docs/arch/`](./docs/arch): 아키텍처 문서
 - [`docs/lang/`](./docs/lang): 언어 학습 가이드
 - [`docs/issues/`](./docs/issues): 이슈별 개발 산출물 (plan, tasks, review, phase 가이드)
+- [`docs/postmortems/`](./docs/postmortems): 장애 및 디버깅 회고 문서
 
 ## Built With AI
 

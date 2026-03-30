@@ -43,15 +43,16 @@
 
 ## Phase 3 — 컨테이너화
 
-- [ ] **Dockerfile 작성** (멀티스테이지)
-  - Stage 1 (`node`): `frontend/` 빌드 → `dist/`
-  - Stage 2 (`golang`): Stage 1 `dist/` COPY 후 `go build`
+- [x] **Dockerfile 작성** (멀티스테이지)
+  - Stage 1 (`node`): `frontend/` 빌드 → `web/static/`
+  - Stage 2 (`golang`): Stage 1 `web/static/` COPY 후 `go build` (embed 포함)
   - Stage 3 (`debian:bookworm-slim`): 바이너리 + Litestream 복사, 실행
-- [ ] **Litestream 설정**
+- [x] **Litestream 설정**
   - `litestream.yml` 작성 (복제 대상 DB 경로, 오브젝트 스토리지 설정)
   - Dockerfile에서 Litestream `-exec` 래퍼로 앱 실행
-- [ ] **docker-compose.yml 작성** (로컬 검증용)
-- [ ] **컨테이너 로컬 동작 확인**: `docker compose up` 후 전체 기능 확인
+- [x] **docker-compose.yml 작성** (로컬 검증용, `command: ["./server"]`로 Litestream 없이 실행)
+- [x] **컨테이너 로컬 동작 확인**: `docker compose up` 후 전체 기능 확인
+  - GET `/` → 200 (React SPA), GET `/health` → 200, GET `/api/v1/auth/me` → 401, OPTIONS → 204
 
 ---
 

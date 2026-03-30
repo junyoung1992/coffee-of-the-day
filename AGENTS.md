@@ -35,6 +35,7 @@ docs/
       tasks.md
       review/
       guide/
+  postmortems/                          # incident and debugging reports (cross-issue)
 ```
 
 ## Reference
