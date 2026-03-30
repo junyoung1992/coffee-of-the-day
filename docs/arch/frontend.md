@@ -1,319 +1,87 @@
 # Frontend 아키텍처 결정 문서
 
-> 각 기술 선택의 이유와 트레이드오프를 설명합니다.
+> 이 코드베이스에서 작업할 때 알아야 하는 비자명한 규칙과 제약을 설명합니다.
 
 ---
 
-## 번들러: Vite
-
-**결정**: Vite 사용 (Create React App 대신).
-
-CRA(Create React App)는 2023년 이후 사실상 유지보수가 중단된 상태입니다. 현재 React 공식 문서도 Vite를 권장합니다.
-
-| | CRA | **Vite** |
-|--|-----|----------|
-| 개발 서버 시작 | 전체 번들링 후 시작 (느림) | 네이티브 ESM, 즉시 시작 |
-| HMR (코드 변경 반영) | 느림 | 거의 즉각적 |
-| 유지보수 상태 | 사실상 중단 | 활발히 관리됨 |
-
----
-
-## UI 프레임워크: React
-
-**결정**: 사용자가 선택.
-
-현재 프로젝트는 **React 19**를 사용합니다.
-
-이 프로젝트와 직접 관련 있는 포인트:
-- 컴포넌트 단위 개발로 카페 폼 / 브루 폼 / 자동완성 입력을 독립적으로 구성하기 용이
-- `StrictMode` + 함수형 컴포넌트 기반으로 상태 흐름을 비교적 단순하게 유지 가능
-- TanStack Query, React Router와 조합이 자연스러워 페이지 단위 상태 관리에 적합
-
----
-
-## 스타일: Tailwind CSS
-
-**결정**: Tailwind CSS v4 사용.
-
-POC에서 스타일링에 쓰는 시간을 최소화하기 위한 선택입니다.
-
-**왜 Tailwind인가**
-
-- CSS 파일을 별도로 관리하지 않아도 됨 — 컴포넌트에 클래스만 쓰면 됨
-- 디자인 토큰(색상, 간격, 폰트 크기)이 미리 정의되어 있어 일관된 UI가 자연스럽게 만들어짐
-- POC에서 빠른 프로토타이핑에 적합
-
-**트레이드오프**
-- JSX 마크업이 클래스 이름으로 길어질 수 있음 → 반복되는 패턴은 컴포넌트로 추출해서 해결
-- 커스텀 디자인 시스템이 필요해지면 CSS 변수나 Tailwind 설정 확장으로 대응 가능
-
-**v4 기준 현재 적용 방식**
-
-이 프로젝트는 예전 Tailwind v3 방식(`tailwind.config.ts`, `postcss.config.ts`) 대신, Vite 플러그인과 CSS import 방식으로 붙입니다.
-
-```ts
-// vite.config.ts
-import tailwindcss from '@tailwindcss/vite'
-
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-})
-```
-
-```css
-/* src/index.css */
-@import "tailwindcss";
-```
-
-즉, 지금 문서를 읽는 기준점은 "설정 파일을 많이 만지는 Tailwind"가 아니라 **Vite 플러그인 중심의 Tailwind v4**입니다.
-
----
-
-## 서버 상태 관리: TanStack Query (React Query)
-
-**결정**: TanStack Query v5 사용.
-
-이 프로젝트에서 다루는 상태는 크게 세 종류입니다.
-
-1. **서버 상태**: 커피 기록 목록, 기록 상세, 자동완성 제안처럼 API에서 가져오고 캐시해야 하는 값
-2. **클라이언트 상태**: 폼 입력값, 드롭다운 열림 여부처럼 컴포넌트 내부에만 머무는 값
-3. **URL 상태**: 목록 필터처럼 공유/북마크가 가능해야 하는 값
-
-Redux나 Zustand 같은 전역 상태 관리 라이브러리는 주로 클라이언트 상태를 위한 도구입니다. 하지만 이 프로젝트의 주요 상태는 서버 상태이고, 서버 상태를 전역 스토어에 넣으면 캐시 무효화, 로딩/에러 처리, 재시도 로직을 직접 구현해야 합니다.
-
-TanStack Query는 이 모든 것을 해결합니다.
-
-```typescript
-// 이게 전부. 캐싱, 로딩, 에러, 재시도가 자동으로 처리됨
-const { data, isLoading, error } = useQuery({
-  queryKey: ['logs', filters],
-  queryFn: () => getLogs(filters),
-})
-
-// 기록 생성 후 목록 자동 갱신
-const mutation = useMutation({
-  mutationFn: createLog,
-  onSuccess: () => queryClient.invalidateQueries({ queryKey: ['logs'] }),
-})
-```
-
-**클라이언트 상태**(폼 입력, 탭 선택 등)는 `useState` / `useReducer`로 충분합니다. 별도 전역 상태 라이브러리를 추가하지 않습니다.
-
-**URL 상태**는 `useSearchParams`로 관리합니다. Phase 2부터 목록 필터를 URL에 반영해 새로고침, 공유, 뒤로가기와 자연스럽게 연결되도록 설계했습니다.
-
-Phase 3 자동완성, Phase 4 인증 상태 모두 같은 원칙을 따릅니다.
-
-- API 호출: `useQuery`
-- 목록 누적: `useInfiniteQuery`
-- 조건부 요청: `enabled`
-- 캐시 구분: `queryKey`
-
-**인증 상태도 TanStack Query로 관리**
-
-Phase 4에서 인증 상태를 `useState`나 Context 대신 TanStack Query 캐시로 관리합니다.
-
-```typescript
-export const AUTH_KEY = ['auth', 'me'] as const
-
-export function useCurrentUser() {
-  return useQuery({
-    queryKey: AUTH_KEY,
-    queryFn: getMe,        // GET /api/v1/auth/me
-    retry: false,          // 401에 재시도 무의미
-    staleTime: 5 * 60_000, // 5분간 캐시 유지 → 페이지 이동 시 불필요한 /me 요청 없음
-  })
-}
-```
-
-로그인 성공 시 서버가 이미 반환한 user를 `queryClient.setQueryData(AUTH_KEY, user)`로 캐시에 직접 저장합니다. `/me` 네트워크 요청 없이 UI가 즉시 갱신됩니다. 로그아웃 시에는 `queryClient.clear()`로 전체 캐시를 비워 모든 사용자 데이터를 제거합니다.
-
-즉, 이 프로젝트에서 TanStack Query는 단순 fetch helper가 아니라 **서버 상태 캐시 계층이자 인증 상태 저장소**입니다.
-
----
-
-## 라우팅: React Router v7
-
-**결정**: React Router v7 사용.
-
-Phase 4에서 인증이 추가되면서 `ProtectedRoute` 패턴이 도입됐습니다. 인증이 필요한 라우트를 하나의 부모 요소로 감싸는 방식입니다.
-
-`ProtectedRoute`는 `src/components/ProtectedRoute.tsx`에 독립 파일로 분리되어 있습니다. `react-refresh/only-export-components` 규칙에 따라 컴포넌트와 라우터 설정 객체를 같은 파일에서 export하면 HMR(Hot Module Replacement)이 전체 모듈을 리로드하기 때문입니다.
-
-```tsx
-// src/components/ProtectedRoute.tsx
-export default function ProtectedRoute() {
-  const { data: user, isLoading, isError } = useCurrentUser()
-
-  if (isLoading) return null          // 깜빡임 방지
-  if (isError || !user) return <Navigate to="/login" replace />
-  return <Outlet />                   // 자식 라우트 렌더링
-}
-
-// src/router.tsx
-import ProtectedRoute from './components/ProtectedRoute'
-
-export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
-  {
-    element: <ProtectedRoute />,      // 인증 게이트
-    children: [
-      { path: '/', element: <HomePage /> },
-      { path: '/logs/new', element: <LogFormPage /> },
-      { path: '/logs/:id', element: <LogDetailPage /> },
-      { path: '/logs/:id/edit', element: <LogFormPage /> },
-    ],
-  },
-])
-```
-
-`<Outlet />`은 Spring MVC의 `FilterChain.doFilter()`와 유사합니다 — 검사를 통과하면 다음 계층(실제 페이지)으로 요청을 넘깁니다.
-
-라우트 수가 적고, 각 화면의 데이터 로딩은 이미 TanStack Query 훅이 담당하고 있으므로 `loader` / `action` 중심 구조보다 이 구성이 더 단순합니다.
-
-```
-/login               → LoginPage (공개)
-/register            → RegisterPage (공개)
-/                    → HomePage (인증 필요)
-/logs/new            → LogFormPage (인증 필요)
-/logs/:id            → LogDetailPage (인증 필요)
-/logs/:id/edit       → LogFormPage (인증 필요, id 파라미터로 생성/수정 구분)
-```
-
----
-
-## 디렉토리 구조와 설계 원칙
+## 디렉토리 구조와 분리 원칙
 
 ```
 src/
 ├── pages/          # 라우트와 1:1 대응하는 페이지 컴포넌트
 ├── components/     # 여러 페이지에서 재사용되는 UI 컴포넌트
-├── api/            # API 호출 함수 (fetch 래핑)
+├── api/            # API 호출 함수 (순수 함수, React 무의존)
 ├── types/          # OpenAPI 생성 타입 + 파생 타입
 └── hooks/          # TanStack Query를 래핑한 커스텀 훅
 ```
 
-**왜 `api/`와 `hooks/`를 분리하는가**
-
-- `api/`: 순수 함수. HTTP 요청을 보내고 응답을 반환. React에 의존하지 않음.
-- `hooks/`: TanStack Query 훅. React 컴포넌트에서 사용. 캐싱·에러·로딩 상태 포함.
-
-이렇게 분리하면 `api/`를 테스트할 때 React 환경이 필요 없고, 나중에 TanStack Query를 다른 라이브러리로 교체하더라도 `api/`는 손대지 않아도 됩니다.
-
-**Refresh Single-Flight**
-
-`api/client.ts`의 자동 토큰 갱신 인터셉터는 single-flight 패턴을 사용합니다. 액세스 토큰 만료 시 여러 API 요청이 동시에 401을 받으면, 각 요청이 독립적으로 `/auth/refresh`를 호출하는 대신 모듈 스코프의 `refreshPromise`를 공유합니다.
-
-```typescript
-let refreshPromise: Promise<void> | null = null
-
-// 401 수신 시
-if (!refreshPromise) {
-  refreshPromise = doFetch('/auth/refresh', { method: 'POST' })
-    .then(...)
-    .finally(() => { refreshPromise = null })
-}
-await refreshPromise  // 이미 진행 중이면 같은 Promise를 기다림
-```
-
-서버가 refresh rotation(이전 토큰 무효화)을 도입하면 중복 refresh 요청은 race condition으로 이어지므로, 이 패턴이 필수적입니다. Go의 `sync/singleflight`와 동일한 개념이며, JavaScript `Promise`가 이미 완료된 뒤에도 `await`할 수 있는 특성 덕분에 자연스럽게 구현됩니다.
+`api/`와 `hooks/`를 분리하는 이유: `api/`는 React 없이 테스트 가능하고, 상태 관리 라이브러리를 교체해도 `api/`는 영향 없음.
 
 ---
 
-## 타입 설계: OpenAPI 생성 타입 + Discriminated Union
+## 상태 관리 전략
 
-프론트 타입의 **단일 소스 오브 트루스는 `openapi.yml`** 입니다.
+| 상태 유형 | 도구 | 예시 |
+|---|---|---|
+| 서버 상태 | TanStack Query v5 | 커피 기록 목록, 기록 상세, 자동완성 제안 |
+| 클라이언트 상태 | `useState` / `useReducer` | 폼 입력값, 드롭다운 열림 여부 |
+| URL 상태 | `useSearchParams` | 목록 필터 (새로고침/공유/뒤로가기 보존) |
 
-흐름은 다음과 같습니다.
+별도 전역 상태 라이브러리(Redux, Zustand 등)를 사용하지 않는다.
+
+**인증 상태도 TanStack Query 캐시로 관리한다.** 로그인 성공 시 `setQueryData`로 즉시 캐시 저장, 로그아웃 시 `queryClient.clear()`로 전체 캐시 제거.
+
+→ `hooks/useAuth.ts`
+
+---
+
+## 타입 설계: OpenAPI → Discriminated Union
+
+`openapi.yml`이 단일 소스 오브 트루스.
 
 1. `openapi.yml` 수정
-2. `npm run generate`
-3. `src/types/schema.ts` 자동 생성
-4. `src/types/*.ts`에서 프로젝트 친화적인 alias / 파생 타입 정의
+2. `npm run generate` → `src/types/schema.ts` 자동 생성
+3. `src/types/*.ts`에서 프로젝트 친화적인 파생 타입 정의
 
-즉, 프론트 타입을 백엔드 Go 코드에서 손으로 옮기지 않습니다.
+OpenAPI 3.0 스키마만으로는 `log_type`에 따라 `cafe` 또는 `brew`가 반드시 존재한다는 제약을 표현하기 어렵다. 그래서 생성 타입 위에 TypeScript discriminated union을 한 겹 더 얹는다. `log.log_type === 'cafe'`로 좁히면 `log.cafe` 존재가 보장된다.
 
-```typescript
-// types/log.ts
-
-export type CoffeeLogResponse = components['schemas']['CoffeeLogResponse']
-
-export type CafeLogFull = Omit<CoffeeLogResponse, 'log_type' | 'cafe' | 'brew'> & {
-  log_type: 'cafe'
-  cafe: NonNullable<CoffeeLogResponse['cafe']>
-  brew?: never
-}
-
-export type BrewLogFull = Omit<CoffeeLogResponse, 'log_type' | 'cafe' | 'brew'> & {
-  log_type: 'brew'
-  brew: NonNullable<CoffeeLogResponse['brew']>
-  cafe?: never
-}
-
-export type CoffeeLogFull = CafeLogFull | BrewLogFull
-```
-
-OpenAPI 3.0 스키마만으로는 `log_type`에 따라 `cafe` 또는 `brew`가 반드시 존재한다는 제약을 프론트 타입에 완전히 표현하기 어렵습니다. 그래서 생성 타입 위에 TypeScript 전용 discriminated union을 한 겹 더 얹습니다.
-
-이 구조에서 TypeScript 컴파일러는 `log.log_type === 'cafe'`로 좁히면 `log.cafe`가 존재함을 보장합니다. 런타임 오류 없이 타입 안전하게 서브 타입별 UI를 렌더링할 수 있습니다.
-
-```tsx
-// 타입 가드 없이 안전하게 분기
-if (log.log_type === 'cafe') {
-  return <CafeLogDetail cafe={log.cafe} />  // log.cafe 타입이 CafeDetail로 좁혀짐
-} else {
-  return <BrewLogDetail brew={log.brew} />  // log.brew 타입이 BrewDetail로 좁혀짐
-}
-```
-
-이 방식의 장점:
-
-- API 계약 변경 시 `openapi.yml`을 기준으로 일관되게 반영 가능
-- 생성 타입과 화면용 파생 타입의 역할이 분리됨
-- Phase 3처럼 `SuggestionsResponse`가 추가되어도 같은 워크플로우로 확장 가능
+→ `types/log.ts`
 
 ---
 
-## 환경 변수와 API 접근 전략
+## 라우팅: React Router v7
 
-**결정**: 모든 환경에서 상대 경로(`/api/v1`)를 기본으로 사용.
+`ProtectedRoute`로 인증이 필요한 라우트를 감싸는 구조. `ProtectedRoute`는 `react-refresh/only-export-components` 규칙 때문에 독립 파일로 분리되어 있다 (같은 파일에서 컴포넌트 + 라우터 설정 객체를 export하면 HMR이 전체 리로드).
 
-### 운영 환경 (Fly.io)
-
-Go 바이너리가 React SPA를 embed해 동일 origin에서 서빙합니다. 브라우저 입장에서 API 호출이 같은 origin으로 나가므로 CORS가 불필요하고, 쿠키도 자연스럽게 전송됩니다.
-
-```
-브라우저 → https://coffee-of-the-day.fly.dev/        (SPA)
-        → https://coffee-of-the-day.fly.dev/api/v1   (API, 동일 origin)
-```
-
-### 로컬 개발 환경
-
-Vite dev server(`localhost:5173`)와 Go 서버(`localhost:8080`)가 별도 포트에서 실행됩니다. Vite proxy가 `/api` 요청을 Go 서버로 전달해 브라우저에서는 동일 origin처럼 동작합니다.
-
-```ts
-// vite.config.ts
-server: {
-  proxy: {
-    '/api': 'http://localhost:8080',
-  },
-},
-```
-
-### 환경 변수
-
-`frontend/.env`에 기본값을 설정하고, 환경별 파일은 사용하지 않습니다.
-
-```
-VITE_API_BASE_URL=/api/v1
-```
-
-`client.ts`에서 빈 문자열 fallback을 위해 `??` 대신 `||`를 사용합니다. Vite는 미설정 환경변수를 빈 문자열로 치환하기 때문에 `??`는 빈 문자열을 통과시킵니다.
-
-```ts
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
-```
+→ `components/ProtectedRoute.tsx`, `router.tsx`
 
 ---
 
-*Last updated: 2026-03-30 (Issue #1 — Vite proxy, 환경 변수 전략, single-origin 서빙 반영)*
+## Refresh Single-Flight
+
+`api/client.ts`의 토큰 갱신 인터셉터는 single-flight 패턴을 사용한다. 여러 요청이 동시에 401을 받으면 모듈 스코프의 `refreshPromise`를 공유해 `/auth/refresh`를 한 번만 호출한다. Refresh rotation 도입 시 중복 요청은 race condition을 유발하므로 이 패턴이 필수적이다.
+
+→ `api/client.ts`
+
+---
+
+## Tailwind CSS v4
+
+Vite 플러그인 방식으로 적용. `tailwind.config.ts` / `postcss.config.ts` 없음.
+
+→ `vite.config.ts`, `src/index.css`
+
+---
+
+## 환경 변수와 API 접근
+
+모든 환경에서 상대 경로(`/api/v1`)를 기본으로 사용한다.
+
+- **운영**: Go 바이너리가 SPA를 embed해 동일 origin 서빙 → CORS 불필요
+- **로컬**: Vite proxy가 `/api` 요청을 Go 서버(`localhost:8080`)로 전달
+
+→ `vite.config.ts`, `.env`
+
+---
+
+*Last updated: 2026-03-30*
