@@ -5,10 +5,10 @@ web/static/*
 # Vite 기본 출력 디렉토리 (직접 빌드 시 생성될 수 있음)
 frontend/dist/
 
-# 로컬 개발 데이터베이스
-backend/coffee.db
-backend/coffee.db-shm
-backend/coffee.db-wal
+# 로컬 개발 데이터베이스 (루트, backend/ 어디서든 실행 가능)
+*.db
+*.db-shm
+*.db-wal
 
 # Docker 로컬 볼륨 (docker-compose 실행 시 생성)
 data/
