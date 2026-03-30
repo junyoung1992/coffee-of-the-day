@@ -7,12 +7,12 @@
 
 ## Phase 1 — HTML 메타데이터 및 아이콘
 
-- [ ] **타이틀 변경**
+- [x] **타이틀 변경**
   - `frontend/index.html`: `<title>frontend</title>` → `<title>Coffee of the Day</title>`
 
-- [ ] **Favicon 교체**
-  - `frontend/public/favicon.svg`: 현재 Vite 기본 번개 아이콘(보라색)을 커피 테마 SVG로 교체
-  - 앱의 색상 팔레트: 주요색 `stone-950`, 강조색 `amber-900`, 배경 `#faf4eb`
+- [x] **Favicon 교체**
+  - `frontend/public/favicon.svg`: Vite 기본 번개 아이콘 → 커피잔 SVG (stone-950/amber-900 팔레트)
+  - Vite 보일러플레이트 파일 삭제: `icons.svg`, `App.tsx`, `App.css`, `assets/`
 
 > Apple Touch Icon + Web App Manifest는 PNG 이미지 준비 후 별도 진행 (이슈 #3 댓글 참조)
 
