@@ -6,8 +6,8 @@
 
 ## Phase 1 — 백엔드 안정성
 
-- [ ] **WAL 모드**: `main.go` DB 연결 문자열에 `_journal_mode=WAL` 추가
-- [ ] **Graceful Shutdown**: `main.go`에 SIGTERM/SIGINT 핸들링 추가
+- [x] **WAL 모드**: `main.go` DB 연결 문자열에 `_journal_mode=WAL` 추가
+- [x] **Graceful Shutdown**: `main.go`에 SIGTERM/SIGINT 핸들링 추가
   - `http.Server` 명시적 생성으로 전환
   - signal 채널 수신 후 `server.Shutdown(ctx)` 호출 (타임아웃 30초)
   - `db.Close()` graceful 종료 포함
