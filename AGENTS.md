@@ -26,7 +26,7 @@ frontend/
 docs/
   spec.md                               # service spec — consult when requirements are unclear
   openapi.yml                           # API contract (single source of truth)
-  arch/                                 # architecture docs (updated after each merge)
+  arch/                                 # architecture docs (updated before PR creation)
     backend.md                          # consult for backend architecture rationale and dependency decisions
     frontend.md                         # consult for frontend architecture rationale and dependency decisions
   backlog.md                            # open work — consult when the issue is related to backlog items
@@ -50,8 +50,10 @@ docs/
 - Comments in Korean. Keep technical terms in original language.
 - `docs/spec.md` and `docs/openapi.yml` must always reflect actual application state.
   - If `docs/spec.md` needs to change, propose the change to the user and get approval before starting development.
-- After merging an issue, update `docs/arch/` if architecture or key design decisions changed.
-- Follow the Conventional Commits specification. Always include a description body, not just the subject line.
+- Before creating a PR, finalize documentation:
+  - Update `docs/arch/` if architecture or key design decisions changed.
+  - Review `docs/spec.md` to ensure it reflects the current application state.
+- Follow the Conventional Commits specification. Always include a description body, not just the subject line. Commit messages must be written in English.
 - Do not create commits automatically. Commit only after review is completed and the user explicitly requests it.
 
 ### Backend
