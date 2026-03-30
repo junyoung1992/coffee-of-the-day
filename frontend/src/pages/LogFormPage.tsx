@@ -751,7 +751,7 @@ export default function LogFormPage() {
         <>
           <Link
             to={isEditMode && id ? `/logs/${id}` : '/'}
-            className="inline-flex items-center justify-center rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
           >
             {isEditMode ? '상세로' : '목록으로'}
           </Link>
@@ -759,7 +759,7 @@ export default function LogFormPage() {
             type="submit"
             form="log-form"
             disabled={activeMutation.isPending || (isEditMode && isLoading)}
-            className="inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             {activeMutation.isPending ? '저장 중...' : isEditMode ? '변경 저장' : '기록 추가'}
           </button>

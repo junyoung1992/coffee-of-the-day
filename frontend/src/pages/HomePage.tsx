@@ -20,13 +20,17 @@ function parseLogType(value: string | null): LogType | undefined {
   return undefined
 }
 
+import { getDefaultDateFrom, getDefaultDateTo } from '../utils/date'
+
 export default function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // URL 파라미터에서 현재 필터 상태를 파싱한다
+  // URL 파라미터에서 현재 필터 상태를 파싱한다.
+  // 날짜 파라미터가 없으면 당월 1일~오늘을 기본값으로 사용한다.
+  // 기본값은 URL에 쓰지 않아 깨끗한 URL을 유지한다.
   const logType = parseLogType(searchParams.get('log_type'))
-  const dateFrom = searchParams.get('date_from') ?? ''
-  const dateTo = searchParams.get('date_to') ?? ''
+  const dateFrom = searchParams.get('date_from') ?? getDefaultDateFrom()
+  const dateTo = searchParams.get('date_to') ?? getDefaultDateTo()
 
   const {
     data,
@@ -131,13 +135,13 @@ export default function HomePage() {
         <>
           <Link
             to="/logs/new"
-            className="inline-flex items-center justify-center rounded-full border border-amber-900/15 bg-amber-100/70 px-4 py-2 text-sm font-semibold text-amber-950 transition hover:border-amber-900/30 hover:bg-amber-100"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-amber-900/15 bg-amber-100/70 px-4 py-2 text-sm font-semibold text-amber-950 transition hover:border-amber-900/30 hover:bg-amber-100"
           >
             오늘의 기록 추가
           </Link>
           <Link
             to="/logs/new"
-            className="inline-flex items-center justify-center rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
           >
             빠른 추가
           </Link>

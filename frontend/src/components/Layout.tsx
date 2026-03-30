@@ -32,14 +32,14 @@ export function Layout({ title, description, actions, children }: LayoutProps) {
             ) : null}
             <Link
               to="/logs/new"
-              className="inline-flex items-center justify-center rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white"
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white"
             >
               New Log
             </Link>
             <button
               onClick={() => logout.mutate()}
               disabled={logout.isPending}
-              className="rounded-full border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 transition hover:border-stone-400 hover:text-stone-900 disabled:opacity-50"
+              className="whitespace-nowrap rounded-full border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 transition hover:border-stone-400 hover:text-stone-900 disabled:opacity-50"
             >
               로그아웃
             </button>
@@ -54,14 +54,14 @@ export function Layout({ title, description, actions, children }: LayoutProps) {
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-900/55">
                 Personal coffee journal
               </p>
-              <h1 className="text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+              <h1 className="text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl">
                 {title}
               </h1>
               {description ? (
                 <p className="text-sm leading-6 text-stone-600 sm:text-base">{description}</p>
               ) : null}
             </div>
-            {actions ? <div className="flex shrink-0 flex-wrap gap-3">{actions}</div> : null}
+            {actions ? <div className="flex w-full shrink-0 flex-wrap gap-3 sm:w-auto">{actions}</div> : null}
           </div>
 
           <div className="pt-6">{children}</div>
