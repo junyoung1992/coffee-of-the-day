@@ -1,344 +1,85 @@
 # Backend 아키텍처 결정 문서
 
-> 각 기술 선택의 이유와 트레이드오프를 설명합니다.
-> "왜 이걸 썼는가"를 기록해두면 나중에 교체 또는 유지 결정을 내릴 때 기준이 됩니다.
+> 이 코드베이스에서 작업할 때 알아야 하는 비자명한 규칙과 제약을 설명합니다.
 
 ---
 
-## 언어: Go
+## Layered Architecture
 
-**결정**: 사용자가 선택.
+handler → service → repository 3계층 구조.
 
-Go가 이 프로젝트에 잘 맞는 이유:
-- 컴파일 바이너리 하나로 배포 — 나중에 서버에 올릴 때 런타임 설치 불필요
-- 표준 라이브러리의 `net/http`가 강력해서 외부 의존성을 최소화할 수 있음
-- 정적 타입으로 DB 쿼리 결과와 API 응답 타입을 컴파일 타임에 검증 가능
+- **handler**: HTTP를 알고, 비즈니스 로직을 모른다 (요청 파싱, 응답 직렬화, 상태 코드 결정)
+- **service**: 비즈니스 규칙과 입력 정규화를 알고, HTTP를 모른다
+- **repository**: SQL과 DB 트랜잭션을 알고, 비즈니스 규칙을 모른다
 
----
+새 기능을 추가할 때는 기존 레이어를 건드리지 않고 vertical slice로 확장한다 (예: Phase 3에서 `SuggestionHandler/Service/Repository` 추가).
 
-## HTTP 라우터: chi
-
-**결정**: `net/http` 표준 라이브러리 + `chi` 라우터
-
-**왜 chi인가**
-
-Go의 HTTP 라우터 생태계에서 주요 선택지는 세 가지입니다.
-
-| 라우터 | 특징 | 이 프로젝트와의 맞음 |
-|--------|------|---------------------|
-| `net/http` 표준만 사용 | 의존성 0, 기능 제한 | URL 파라미터(`/logs/:id`) 처리가 불편 |
-| **chi** | 경량, `net/http` 100% 호환 | ✅ 표준 호환 유지하면서 라우팅 편의성 확보 |
-| Gin / Echo | 풀프레임워크, 독자적인 Context | 표준 `http.Handler`와 호환 안 됨, 이 규모에서 과함 |
-
-chi의 핵심 장점은 **`net/http`의 `http.Handler` 인터페이스를 그대로 사용**한다는 점입니다. 미들웨어를 표준 방식으로 작성할 수 있고, 나중에 chi를 제거해도 핸들러 코드를 거의 바꿀 필요가 없습니다.
-
-```go
-// chi 미들웨어는 그냥 net/http 미들웨어
-func UserIDMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // ...
-        next.ServeHTTP(w, r)
-    })
-}
-```
+**트랜잭션 소유권**: repository가 aggregate 단위로 tx를 연다. `coffee_logs` + 서브 테이블 삽입을 하나의 repository 메서드에서 처리. 단, 하나의 유스케이스가 여러 repository를 원자적으로 묶어야 하는 상황이 생기면 service layer로 tx 경계를 올린다.
 
 ---
 
-## DB: SQLite
+## SQLite
 
-**결정**: POC 단계에서 SQLite 사용.
+### WAL 모드 + 외래키
 
-**왜 SQLite인가**
+DSN에서 WAL 모드와 외래키를 함께 활성화한다. 별도로 `PRAGMA`를 실행하면 connection pool에서 해당 연결 하나에만 적용되므로 DSN 파라미터 방식을 사용한다.
 
-| | SQLite | PostgreSQL |
-|--|--------|------------|
-| 설치 | 파일 하나 | 서버 설치·실행 필요 |
-| 로컬 실행 | `./coffee.db` 파일만 있으면 됨 | Docker 또는 로컬 설치 필요 |
-| 동시성 | 쓰기 락 있음 (POC엔 무관) | 높은 동시성 지원 |
-| 이식성 | DB 파일을 그대로 복사해 이동 가능 | — |
+→ `config/config.go`
 
-POC에서 단일 사용자라는 전제 조건에서 SQLite는 "설정 없이 바로 시작"할 수 있는 최선의 선택입니다. 현재 Fly.io에 배포된 상태에서도 단일 인스턴스 + 볼륨 구조로 잘 동작합니다. 사용자가 늘어나 동시 쓰기가 병목이 되면 PostgreSQL로 교체합니다.
+### 배열 저장
 
-**WAL 모드**
-
-SQLite의 기본 저널 모드(delete)는 쓰기 시 전체 DB를 잠그지만, WAL(Write-Ahead Logging) 모드는 읽기와 쓰기가 동시에 가능합니다. 또한 Litestream은 WAL 파일을 tail하는 방식으로 복제하므로, Litestream 사용 시 WAL 모드는 필수입니다.
-
-```go
-// DSN에서 WAL 모드와 외래키를 함께 활성화
-db, err := sql.Open("sqlite3", cfg.DBPath+"?_foreign_keys=on&_journal_mode=WAL")
-```
-
-**SQLite의 외래키 비활성화 기본값**
-
-SQLite는 연결을 열어도 외래키 강제가 기본으로 꺼져 있습니다. `PRAGMA foreign_keys = ON`을 명시적으로 실행하지 않으면 스키마에 `REFERENCES`와 `ON DELETE CASCADE`를 선언해도 아무 효과가 없습니다.
-
-이 프로젝트에서는 DSN 수준에서 활성화합니다 (위의 WAL 모드 설정과 함께).
-
-코드로 `PRAGMA foreign_keys = ON`을 직접 실행하면 pool에서 해당 연결 하나에만 적용되어 다른 연결에서는 여전히 꺼진 상태가 될 수 있습니다. DSN 파라미터 방식이 안전합니다.
-
-PostgreSQL로 교체하면 이 문제는 사라집니다. PostgreSQL은 외래키를 항상 강제합니다.
-
-**SQLite에서 배열 저장 방식**
-
-SQLite는 배열 타입이 없어서 `companions`, `tasting_tags`, `brew_steps`를 JSON 텍스트로 저장합니다.
-
-```
-companions TEXT NOT NULL DEFAULT '[]'  →  '["지수","민준"]'
-```
-
-Go 레이어에서 `encoding/json`으로 `[]string` ↔ `string` 직렬화를 처리합니다. PostgreSQL로 교체하면 이 부분만 `TEXT[]` 또는 `JSONB`로 바꾸면 됩니다.
+SQLite에 배열 타입이 없으므로 `companions`, `tasting_tags`, `brew_steps`를 JSON 텍스트로 저장한다 (`'["지수","민준"]'`). Go 레이어에서 `[]string` ↔ `string` 직렬화를 처리한다.
 
 ---
 
-## 쿼리 레이어: sqlc
+## sqlc 우선 + raw SQL 보완
 
-**결정**: ORM 대신 **sqlc를 기본으로 사용하고, 필요한 곳에 raw SQL을 병행**.
+- 기본 CRUD, 단순 조회: sqlc 사용 (`db/queries/`)
+- sqlc가 정적 분석하기 어려운 쿼리 (`json_each` 가상 테이블, 특수 집계): `database/sql`로 직접 실행
 
-**왜 sqlc인가**
-
-sqlc는 SQL 쿼리 파일을 읽어서 타입이 완전히 맞는 Go 코드를 자동 생성합니다.
-
-```sql
--- db/queries/logs.sql
--- name: GetLogByID :one
-SELECT * FROM coffee_logs WHERE id = ? AND user_id = ?;
-```
-
-위 SQL에서 아래 Go 코드가 자동 생성됩니다.
-
-```go
-func (q *Queries) GetLogByID(ctx context.Context, id, userID string) (CoffeeLog, error)
-```
-
-주요 선택지와 비교:
-
-| | GORM (ORM) | database/sql (raw) | **sqlc** |
-|--|------------|---------------------|----------|
-| 타입 안전성 | 런타임 오류 가능 | 없음 | ✅ 컴파일 타임 보장 |
-| SQL 제어 | ORM이 SQL 생성 (최적화 어려움) | 직접 작성 | ✅ 직접 작성한 SQL 그대로 실행 |
-| 코드량 | 적음 | 많음 | ✅ 자동 생성으로 적음 |
-| N+1 문제 | 발생하기 쉬움 | 직접 제어 | ✅ 직접 제어 |
-
-이 프로젝트의 기본 CRUD 쿼리 패턴(JOIN이 있는 1:1 서브 테이블 조회 등)은 ORM보다 직접 SQL이 더 명확합니다.
-
-다만 Phase 3 자동완성에서 SQLite `json_each()` 가상 테이블을 사용하는 집계 쿼리가 추가되면서, **모든 쿼리를 sqlc로만 처리하지는 않게 되었습니다.**
-
-```go
-// suggestion_repository.go
-rows, err := r.db.QueryContext(ctx, tagSuggestionsQuery, userID, userID, q, q)
-```
-
-현재 전략은 다음과 같습니다.
-
-- 기본 CRUD, 단순 조회: sqlc 사용
-- sqlc가 정적으로 분석하기 어려운 쿼리(`json_each`, 특수 집계): `database/sql`로 직접 실행
-
-즉, 이 프로젝트의 쿼리 레이어 결정은 "sqlc만 고집"이 아니라 **sqlc 우선 + raw SQL 보완**입니다.
+→ sqlc 쿼리: `db/queries/*.sql`, raw SQL 예시: `internal/repository/suggestion_repository.go`
 
 ---
 
-## 마이그레이션: golang-migrate
+## 마이그레이션
 
-**결정**: golang-migrate 사용.
+golang-migrate + `//go:embed`로 마이그레이션 파일을 바이너리에 포함한다. 컨테이너 환경에서 실행 위치에 의존하지 않기 위함.
 
-SQL 파일을 버전 번호로 관리합니다.
-
-```
-db/migrations/
-  001_create_users.up.sql
-  001_create_users.down.sql
-  002_create_coffee_logs.up.sql
-  ...
-```
-
-- `.up.sql`: 스키마 변경 적용
-- `.down.sql`: 롤백
-
-대안으로 `goose`도 있지만, golang-migrate는 SQL 파일을 그대로 사용하고 Go 코드에 의존하지 않아서 DB 도구로 직접 SQL을 실행하는 것과 동일한 결과를 보장합니다.
-
-**마이그레이션 소스: embed + iofs**
-
-초기에는 `file://db/migrations` 경로로 파일 시스템을 직접 참조했지만, 컨테이너 배포 환경에서는 실행 위치에 의존하는 경로가 깨질 수 있습니다. 이를 해결하기 위해 마이그레이션 파일을 `//go:embed`로 바이너리에 포함하고, `iofs` 드라이버로 읽습니다.
-
-```go
-// backend/db/embed.go
-//go:embed all:migrations
-var MigrationsFS embed.FS
-
-// backend/cmd/server/main.go
-src, err := iofs.New(coffeedb.MigrationsFS, "migrations")
-m, err := migrate.NewWithInstance("iofs", src, "sqlite3", driver)
-```
-
-이렇게 하면 바이너리 하나에 마이그레이션 파일이 포함되어, 어디서 실행하든 동일하게 동작합니다.
-
----
-
-## 아키텍처 패턴: Layered Architecture
-
-**결정**: handler → service → repository 3계층 구조.
-
-```
-HTTP 요청
-    ↓
-handler      : 요청 파싱, 응답 직렬화, HTTP 상태 코드 결정
-    ↓
-service      : 비즈니스 로직, 입력 정규화, 유효성 검사
-    ↓
-repository   : DB 쿼리 실행 (sqlc + 필요 시 raw SQL)
-    ↓
-SQLite
-```
-
-**각 레이어의 책임**
-
-- `handler`: HTTP를 알고, 비즈니스 로직을 모른다
-- `service`: 비즈니스 규칙과 입력 정규화를 알고, HTTP를 모른다
-- `repository`: SQL과 DB 트랜잭션을 알고, 비즈니스 규칙을 모른다
-
-이 구조의 실용적 이유:
-1. `service`를 테스트할 때 HTTP 요청 없이 함수 직접 호출 가능
-2. SQLite → PostgreSQL 교체 시 `repository`만 수정
-3. 인증 방식(POC 헤더 → JWT) 변경 시 `handler` 미들웨어만 수정
-
-**현재 구현에서 트랜잭션은 repository가 연다**
-
-일반론으로는 Spring에서 하던 것처럼 service/application layer가 유스케이스 단위 트랜잭션을 제어하는 편이 더 보편적입니다. 여러 repository 호출을 하나의 비즈니스 작업으로 묶어야 할 때는 그 방식이 더 잘 맞습니다.
-
-하지만 현재 구현은 `coffee_logs`와 서브 테이블 삽입/수정을 **하나의 repository가 aggregate 단위로 캡슐화**하고 있으므로, 트랜잭션 경계도 repository에 있습니다.
-
-```go
-tx, err := r.sqlDB.BeginTx(ctx, nil)
-defer tx.Rollback()
-qtx := r.queries.WithTx(tx)
-```
-
-현재 이 선택이 허용되는 이유:
-
-- 현재 유스케이스는 "로그 저장"이 곧 하나의 영속성 작업 묶음이다
-- service는 입력 정규화와 비즈니스 규칙 검증에 집중한다
-- repository가 `sqlc.WithTx(...)`와 raw SQL을 함께 다루는 쪽이 구현 복잡도를 낮춘다
-
-즉, 이 프로젝트의 layered architecture는 교과서적으로 "service가 tx를 잡는다"가 아니라, **현재 aggregate 저장 경계에 맞춰 repository가 tx를 소유하는 구조**입니다.
-
-다만 이것이 장기 고정 원칙은 아닙니다. 아래와 같은 상황이 생기면 service/application layer로 트랜잭션 경계를 올리는 쪽이 더 적절합니다.
-
-- 하나의 유스케이스가 여러 repository 호출을 하나의 원자적 작업으로 묶어야 할 때
-- 로그 저장 외에 audit, outbox, 통계 갱신 같은 후속 영속성 작업이 같은 tx에 묶여야 할 때
-- repository 메서드 재사용 조합이 늘어나면서 "repository마다 자기 tx를 연다"는 구조가 service orchestration을 방해할 때
-
-그 시점에는 service가 `sql.Tx`를 직접 다루기보다, application layer의 transaction runner 또는 `WithinTransaction(...)` 형태 추상화를 두는 편이 더 낫습니다.
-
-**Phase 3 이후 레이어 확장 방식**
-
-자동완성 기능이 추가되면서 새 레이어 조합도 생겼습니다.
-
-- `SuggestionHandler`
-- `SuggestionService`
-- `SuggestionRepository`
-
-기존 CRUD 흐름을 건드리지 않고 새 vertical slice를 옆으로 확장한 것입니다. Layered architecture를 선택한 이유가 Phase 3에서 실제로 검증된 셈입니다.
+→ `db/embed.go`, `db/migrations/`
 
 ---
 
 ## 인증: JWT + httpOnly 쿠키
 
-**결정**: Phase 4에서 `X-User-Id` 헤더(POC)를 JWT + httpOnly 쿠키 방식으로 교체.
+### 토큰 구조
 
-Phase 1~3은 인증 구현 비용을 절약하면서 멀티유저 DB 구조를 검증하기 위해 헤더 방식을 사용했습니다. `service` / `repository` 레이어가 이미 `userID string` 파라미터를 받는 구조였기 때문에, Phase 4에서 `handler` 미들웨어만 바꿔서 교체가 완료됐습니다.
+- **Access token** (15분): 짧은 수명, 탈취 시 피해 최소화
+- **Refresh token** (7일): httpOnly 쿠키 전용, 자동 갱신 UX 유지
+- 두 토큰 모두 동일 비밀키로 서명 → `token_type` 클레임으로 혼용 방지
 
-```go
-// POC (Phase 1~3): 헤더에서 읽음
-userID := r.Header.Get("X-User-Id")
+### Revocation
 
-// Phase 4~: JWT 클레임에서 읽음 (같은 인터페이스)
-userID := claims.Subject  // context에서 추출
-```
+`users.token_version` 컬럼으로 세대 관리. 로그아웃 시 `token_version`을 증가시켜 이전 리프레시 토큰을 전부 무효화한다.
 
-**왜 httpOnly 쿠키인가**
+### 제약
 
-| 방식 | XSS 취약 | CSRF 취약 |
-|---|---|---|
-| `localStorage` | O (JS로 직접 탈취) | X |
-| `httpOnly` 쿠키 | X (JS 접근 불가) | O (SameSite로 완화) |
+- `GO_ENV=production`일 때 `JWT_SECRET`이 없거나 32바이트 미만이면 서버 시작을 차단한다 (fail-fast).
+- `/auth/*` 라우트에 IP 기준 rate limit 적용 (1분 20회, `go-chi/httprate`).
+- 이메일 정규화 (`ToLower + TrimSpace`)는 서비스 진입 시점에 적용한다.
 
-`httpOnly + SameSite=Strict` 조합으로 두 공격 벡터를 모두 완화합니다.
-
-**Access Token + Refresh Token 분리**
-
-- **Access token** (15분): 짧은 수명 → 탈취돼도 피해 최소화
-- **Refresh token** (7일): 긴 수명, httpOnly 쿠키 전용 → 자동 갱신 UX 유지
-
-두 토큰 모두 동일한 비밀키로 서명되므로 `token_type` 클레임으로 혼용을 방지합니다. 리프레시 토큰을 액세스 토큰 자리에 사용하는 **토큰 혼용 공격(token confusion attack)**을 차단합니다.
-
-**Refresh Token Revocation: token_version**
-
-순수 stateless JWT는 로그아웃 후에도 토큰이 만료 전까지 유효하다는 문제가 있습니다. 이를 해결하기 위해 `users.token_version` 컬럼을 도입했습니다.
-
-- 토큰 발급 시 현재 `token_version`을 클레임에 포함
-- Refresh 요청 시 DB의 `token_version`과 클레임 값을 비교 → 불일치 시 거부
-- 로그아웃 시 DB의 `token_version`을 증가 → 이전 발급된 리프레시 토큰 전부 무효화
-
-이 방식은 Spring Security의 `TokenStore`(토큰 직접 저장/삭제)보다 단순합니다. 정수 하나로 "현재 유효한 세대(generation)"를 표현합니다.
-
-**운영 환경 JWT_SECRET 강제**
-
-`config.Load()`는 `(Config, error)`를 반환하며, `GO_ENV=production`일 때 `JWT_SECRET`이 없거나 32바이트 미만이면 즉시 에러를 반환해 서버 시작을 막습니다. Spring Boot의 필수 `@Value` 속성 누락 시 `ApplicationContext` 로딩 실패와 같은 fail-fast 설계입니다.
-
-**Rate Limiting**
-
-`/auth/*` 라우트 그룹에 `go-chi/httprate`로 IP 기준 rate limit을 적용합니다(1분 20회). chi의 `r.Use()`로 해당 그룹에만 선택적으로 적용하는 방식은 Spring의 `FilterRegistrationBean`으로 URL 패턴을 지정하는 것과 같습니다.
-
-**이메일 정규화**
-
-`Register`와 `Login` 서비스 진입 시 `strings.ToLower(strings.TrimSpace(email))`을 적용합니다. 정규화를 저장 직전이 아닌 진입 시점에 적용해야 검증 기준과 저장 기준이 일치합니다.
-
-**레이어 구조**
-
-```
-config/config.go               ← JWT_SECRET 강제 검증 (fail-fast)
-handler/auth_handler.go        ← HTTP 요청 파싱, 쿠키 설정/만료, token_version 증가 트리거
-handler/middleware.go          ← JWTMiddleware: 쿠키 검증 → context에 userID 주입
-service/auth_service.go        ← 비밀번호 검증(bcrypt), JWT 생성/파싱, 이메일 정규화, revocation
-repository/user_repository.go  ← users 테이블 CRUD, IncrementTokenVersion (sqlc)
-db/migrations/005_*.sql        ← email, password_hash 컬럼 추가
-db/migrations/006_*.sql        ← token_version 컬럼 추가
-```
-
-**CORS와 쿠키**
-
-쿠키를 cross-origin 요청에서 전송하려면 `Access-Control-Allow-Credentials: true`가 필요하며, 이때 `*` 와일드카드 origin은 사용 불가합니다. 기존에 이미 specific origin(`localhost:5173`)을 허용하던 CORS 설정이 그대로 호환됩니다.
+→ `internal/handler/auth_handler.go`, `internal/handler/middleware.go`, `internal/service/auth_service.go`
 
 ---
 
-## 배포 아키텍처: 단일 바이너리 + Fly.io
+## 배포: 단일 바이너리 + Fly.io
 
-**결정**: Go embed로 프론트엔드를 바이너리에 포함, Fly.io에 단일 앱으로 배포.
+### 프론트엔드 embed
 
-### 프론트엔드 embed 서빙
+`//go:embed`로 React 빌드 결과물을 바이너리에 포함. 운영 환경에서는 단일 origin으로 API + SPA를 함께 서빙하므로 CORS 불필요. `web.Handler()`는 파일이 있으면 정적 서빙, 없으면 `index.html` fallback (SPA 라우팅).
 
-`//go:embed`로 React 빌드 결과물을 Go 바이너리에 포함합니다. 운영 환경에서는 단일 origin(`https://coffee-of-the-day.fly.dev`)으로 API와 SPA를 함께 서빙하므로 CORS가 불필요합니다.
+`//go:embed`는 선언 파일 기준 상대 경로만 허용하고 `..` 불가. 그래서 `web/` 패키지가 프로젝트 루트에 위치한다.
 
-```
-web/fs.go        ← //go:embed all:static (Vite 빌드 결과물)
-web/static/      ← Vite outDir (../web/static)
-```
-
-`web.Handler()`는 요청 경로에 해당하는 파일이 있으면 정적 파일을 서빙하고, 없으면 `index.html`로 fallback합니다 (SPA 라우팅).
-
-**왜 `web/` 패키지가 루트에 있는가**: `//go:embed`는 선언 파일 기준 상대 경로만 허용하고 `..`가 불가합니다. `backend/cmd/server/`에서 `frontend/dist/`에 접근할 수 없으므로, 루트에 얇은 `web` 패키지를 두고 `main.go`에서 import합니다.
-
-### Graceful Shutdown
-
-컨테이너 환경에서 SIGTERM(배포 교체, `docker stop`)과 SIGINT(Ctrl+C)를 수신해, 진행 중인 요청을 완료한 후 서버를 종료합니다.
-
-```go
-quit := make(chan os.Signal, 1)
-signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
-<-quit
-srv.Shutdown(ctx)  // 타임아웃 30초
-db.Close()
-```
+→ `web/fs.go`, `web/static/`
 
 ### Fly.io 인프라
 
@@ -348,18 +89,20 @@ db.Close()
 | 머신 | shared-cpu-1x, 256MB |
 | 볼륨 | 1GB (`coffee_data` → `/data`) |
 | DB 경로 | `/data/coffee.db` |
-| Scale-to-zero | `auto_stop_machines = 'stop'` (트래픽 없으면 머신 정지) |
+| Scale-to-zero | `auto_stop_machines = 'stop'` |
 | Health check | `GET /health` (30초 간격) |
 
-### SQLite 백업: Litestream
+### Graceful Shutdown
 
-Litestream은 SQLite WAL 파일을 오브젝트 스토리지(S3 호환)에 실시간 복제합니다. Dockerfile의 기본 CMD에서 `litestream replicate -exec ./server`로 앱 프로세스를 래핑 실행합니다. 현재는 Litestream 없이 배포 중이며, 오브젝트 스토리지 설정 후 활성화 예정입니다.
+SIGTERM/SIGINT 수신 시 진행 중인 요청을 완료한 후 서버 종료 (타임아웃 30초).
+
+→ `cmd/server/main.go`
 
 ### CI/CD
 
-- **CI** (`.github/workflows/ci.yml`): PR 시 `go test ./...` + `npm test` 실행. E2E는 CI 비용 효율을 위해 로컬에서 PR 전 수동 실행.
-- **Deploy** (`.github/workflows/deploy.yml`): `main` 푸시 → CI 통과 → `fly deploy --remote-only`.
+- **CI** (`.github/workflows/ci.yml`): PR 시 `go test ./...` + `npm test` 실행
+- **Deploy** (`.github/workflows/deploy.yml`): `main` 푸시 → CI 통과 → `fly deploy --remote-only`
 
 ---
 
-*Last updated: 2026-03-30 (Issue #1 — Fly.io 배포 파이프라인, WAL, graceful shutdown, embed, CI/CD 반영)*
+*Last updated: 2026-03-30*
