@@ -58,14 +58,14 @@
 
 ## Phase 4 — Fly.io 배포
 
-- [ ] **fly.toml 작성**
+- [x] **fly.toml 작성**
   - 앱 이름, 리전(`nrt`) 설정
   - SQLite 영구 볼륨 마운트 (`/data`)
   - health check (`GET /health`)
   - 환경변수: `GO_ENV=production`, `DB_PATH=/data/coffee.db`
-- [ ] **Fly.io 앱 생성 및 볼륨 생성**: `fly launch` / `fly volumes create`
-- [ ] **Fly.io Secrets 등록**: `JWT_SECRET`, Litestream 오브젝트 스토리지 자격증명
-- [ ] **초기 수동 배포 및 동작 확인**: `fly deploy` 후 배포 URL에서 전체 기능 검증
+- [x] **Fly.io 앱 생성 및 볼륨 생성**: `fly launch` / `fly volumes create`
+- [x] **Fly.io Secrets 등록**: `JWT_SECRET` (Litestream은 첫 배포에서 제외, 별도 활성화 예정)
+- [x] **초기 수동 배포 및 동작 확인**: `fly deploy` 후 `/health` 200 OK 및 브라우저 접속 확인
 
 ---
 
