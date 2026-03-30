@@ -131,13 +131,13 @@ export default function HomePage() {
         <>
           <Link
             to="/logs/new"
-            className="inline-flex items-center justify-center rounded-full border border-amber-900/15 bg-amber-100/70 px-4 py-2 text-sm font-semibold text-amber-950 transition hover:border-amber-900/30 hover:bg-amber-100"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-amber-900/15 bg-amber-100/70 px-4 py-2 text-sm font-semibold text-amber-950 transition hover:border-amber-900/30 hover:bg-amber-100"
           >
             오늘의 기록 추가
           </Link>
           <Link
             to="/logs/new"
-            className="inline-flex items-center justify-center rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
           >
             빠른 추가
           </Link>

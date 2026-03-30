@@ -20,15 +20,15 @@
 
 ## Phase 2 — 모바일 레이아웃 수정
 
-- [ ] **헤더 버튼 개행 방지**
+- [x] **헤더 버튼 개행 방지**
   - `frontend/src/components/Layout.tsx`: 헤더 영역(line 33-45)의 `New Log` 링크와 `로그아웃` 버튼 className에 `whitespace-nowrap` 추가
 
-- [ ] **섹션 헤더 레이아웃 개선**
+- [x] **섹션 헤더 레이아웃 개선**
   - `frontend/src/components/Layout.tsx`: 섹션 헤더 영역(line 52-64)
   - `h1` 태그: `text-3xl` → `text-2xl sm:text-3xl` (모바일 타이틀 크기 축소, 기존 `sm:text-4xl`은 제거)
   - 액션 버튼 래퍼(`div.flex.shrink-0`): 버튼 요소에 `whitespace-nowrap` 추가, 모바일에서 버튼 전체 너비 적용(`w-full sm:w-auto`)
 
-- [ ] **페이지별 액션 버튼 점검**
+- [x] **페이지별 액션 버튼 점검**
   - 아래 파일에서 `Layout`의 `actions` prop에 전달하는 모든 `<Link>`, `<button>`에 `whitespace-nowrap` 추가
   - `frontend/src/pages/HomePage.tsx` (line 132-143): `오늘의 기록 추가`, `빠른 추가`
   - `frontend/src/pages/LogDetailPage.tsx` (line 77-91): `목록으로`, `수정`
