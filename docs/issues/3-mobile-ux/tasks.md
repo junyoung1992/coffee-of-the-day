@@ -39,12 +39,14 @@
 
 ## Phase 3 — 스크롤 동작 수정
 
-- [ ] **ScrollRestoration 적용**
-  - `frontend/src/router.tsx`: 루트 레이아웃 컴포넌트를 추가하고 기존 라우트를 `children`으로 감싼다
-  - `react-router-dom`에서 `Outlet`, `ScrollRestoration`을 import
-  - 루트 레이아웃에서 `<ScrollRestoration />`과 `<Outlet />`을 렌더링
-  - 기존 `/login`, `/register` 라우트와 `ProtectedRoute` children 모두 루트 레이아웃 아래로 이동
-  - 새 컴포넌트나 파일을 만들지 않고 `router.tsx` 내부에 `RootLayout` 함수 컴포넌트를 선언
+- [x] **ScrollRestoration 적용**
+  - `frontend/src/router.tsx`: `RootLayout` 컴포넌트 추가, 기존 라우트를 `children`으로 감쌈
+  - `ScrollRestoration`으로 페이지 전환 시 스크롤 초기화 + 뒤로가기 시 복원
+
+- [x] **Scroll to Top 버튼 추가**
+  - `frontend/src/components/ScrollToTop.tsx`: 스크롤 300px 이상 시 우측 하단에 반투명 화살표 버튼 표시
+  - `requestAnimationFrame` + `easeInOutCubic`으로 고정 500ms 내 스크롤 이동 (거리 무관)
+  - `RootLayout`에서 렌더링하여 모든 페이지에 적용
 
 ---
 
