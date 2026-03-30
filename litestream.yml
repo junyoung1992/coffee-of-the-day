@@ -1,0 +1,7 @@
+# Litestream 복제 설정
+# DB_PATH, LITESTREAM_REPLICA_URL은 런타임 환경변수로 주입된다.
+# Fly.io에서는 fly secrets set으로 등록하고, litestream이 ${VAR} 구문으로 치환한다.
+dbs:
+  - path: ${DB_PATH}
+    replicas:
+      - url: ${LITESTREAM_REPLICA_URL}

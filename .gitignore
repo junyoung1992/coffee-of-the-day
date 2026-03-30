@@ -9,3 +9,6 @@ frontend/dist/
 backend/coffee.db
 backend/coffee.db-shm
 backend/coffee.db-wal
+
+# Docker 로컬 볼륨 (docker-compose 실행 시 생성)
+data/
