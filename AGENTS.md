@@ -22,44 +22,57 @@ backend/
   config/
 frontend/
   src/{pages,components,api,types,hooks}/
-  src/types/schema.ts                   # auto-generated from openapi.yml — never edit manually
+  src/types/schema.ts                   # auto-generated from docs/openapi.yml — never edit manually
+docs/
+  spec.md                               # global service spec
+  openapi.yml                           # global API spec
+  arch/                                 # global architecture docs (updated after each merge)
+  lang/                                 # language study guides
+  issues/                               # per-issue development artifacts
+    initial/                            # initial build (phases 1-4) archived
+    {issue-number}-{title}/             # created per GitHub issue
+      plan.md
+      tasks.md
+      review/
+      guide/
 ```
 
 ## Reference
 
 Read these files only when relevant to the task at hand — do not read them preemptively.
 
-### For implementation
+### Global (maintained across all issues)
 
-- `spec.md`, `plan.md`: consult when requirements are unclear
-- `tasks.md`: use as an implementation checklist when working on a phase
-- `guide/architecture/backend.md`: consult for backend architecture rationale and dependency decisions
-- `guide/architecture/frontend.md`: consult for frontend architecture rationale and dependency decisions
-- `guide/phase/phase_{N}_{M}_{backend|frontend}.md`: consult when implementing a new phase or understanding prior implementation decisions
+- `docs/spec.md`: consult when overall service requirements are unclear
+- `docs/openapi.yml`: the single source of truth for the API contract
+- `docs/arch/backend.md`: consult for backend architecture rationale and dependency decisions
+- `docs/arch/frontend.md`: consult for frontend architecture rationale and dependency decisions
 
-### For code review and refactoring
+### Issue-scoped (read from the active issue's directory)
 
-- `review/`: consult when doing code review or refactoring
+- `docs/issues/{issue}/plan.md`: consult when requirements for the current issue are unclear
+- `docs/issues/{issue}/tasks.md`: use as an implementation checklist for the current issue
+- `docs/issues/{issue}/review/`: consult when doing code review or refactoring
 
 ### For learning (not needed during development)
 
-- `guide/language/go.md`, `guide/language/typescript.md`: language-specific study guides for the user
+- `docs/lang/go.md`, `docs/lang/typescript.md`: language-specific study guides for the user
 
 ## Code Style
 
 ### API
 
 - All APIs must be implemented in compliance with the OpenAPI Specification.
-- The API specification must be maintained in `openapi.yml` using the standard OpenAPI format.
+- The API specification must be maintained in `docs/openapi.yml` using the standard OpenAPI format.
 
 ### Frontend Type Generation
 
-- `openapi.yml` is the single source of truth for frontend API types.
+- `docs/openapi.yml` is the single source of truth for frontend API types.
 - Frontend types must never be written by hand based on backend source code.
-- Run `npm run generate` inside `frontend/` whenever `openapi.yml` changes to regenerate `src/types/schema.ts`.
+- Run `npm run generate` inside `frontend/` whenever `docs/openapi.yml` changes to regenerate `src/types/schema.ts`.
 - `src/types/schema.ts` is auto-generated. Never edit it manually.
-- `src/types/*.ts` files may re-export or derive types from `schema.ts`, but must not duplicate type definitions that belong in `openapi.yml`.
-- Preferred workflow: backend implementation → `openapi.yml` update → `npm run generate` → frontend implementation.
+- `src/types/*.ts` files may re-export or derive types from `schema.ts`, but must not duplicate type definitions that belong in `docs/openapi.yml`.
+- Preferred workflow: backend implementation → `docs/openapi.yml` update → `npm run generate` → frontend implementation.
 
 ### Comments
 
@@ -88,15 +101,19 @@ Read these files only when relevant to the task at hand — do not read them pre
 - Do not modify failing existing tests without first analyzing the root cause.
 - Critical user journeys must be validated with end-to-end tests.
 
+Available test scripts (run inside `frontend/`):
+
+| Script | Command | When to run |
+|--------|---------|-------------|
+| Unit tests | `npm test` | After any component, hook, or utility change |
+| E2E tests | `npm run test:e2e` | After any user-facing flow change (auth, CRUD, navigation) |
+| Type generation | `npm run generate` | After `docs/openapi.yml` changes |
+
 ## Documentation
 
-- After completing each phase task, write a study document that explains what was built and why.
-- The target audience is a developer with Java/Spring experience but no Go or TypeScript/React background.
-- Explain design choices by mapping them to familiar Java/Spring concepts where possible.
-- Focus on why, not just what. Code listings alone are not enough.
-- File location: `guide/phase/phase_{N}_{M}_{backend|frontend}.md`
-- Example paths: `guide/phase/phase_1_3_backend.md`, `guide/phase/phase_1_4_backend.md`
-- Include the study document in the same commit as the implementation.
+- After merging an issue, update `docs/arch/` if the architecture or key design decisions have changed.
+- `docs/spec.md` and `docs/openapi.yml` must always reflect the actual application state.
+  - If `docs/spec.md` needs to change, propose the change to the user and get approval before starting development.
 
 ## Commit
 

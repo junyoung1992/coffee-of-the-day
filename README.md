@@ -91,12 +91,11 @@ npm run test:e2e
 
 ## Documents
 
-- [`spec.md`](./spec.md): 기능 명세
-- [`plan.md`](./plan.md): 개발 계획
-- [`tasks.md`](./tasks.md): 구현 체크리스트
-- [`guide/`](./guide): 학습 문서와 아키텍처 문서
-- [`review/`](./review): 코드 리뷰와 리팩터링 관련 문서
-- [`openapi.yml`](./openapi.yml): API 명세
+- [`docs/spec.md`](./docs/spec.md): 기능 명세
+- [`docs/openapi.yml`](./docs/openapi.yml): API 명세
+- [`docs/arch/`](./docs/arch): 아키텍처 문서
+- [`docs/lang/`](./docs/lang): 언어 학습 가이드
+- [`docs/issues/`](./docs/issues): 이슈별 개발 산출물 (plan, tasks, review, phase 가이드)
 
 ## Built With AI
 
