@@ -1,0 +1,11 @@
+# 프론트엔드 빌드 결과물 (web/static에 출력됨)
+web/static/*
+!web/static/.gitkeep
+
+# Vite 기본 출력 디렉토리 (직접 빌드 시 생성될 수 있음)
+frontend/dist/
+
+# 로컬 개발 데이터베이스
+backend/coffee.db
+backend/coffee.db-shm
+backend/coffee.db-wal

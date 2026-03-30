@@ -16,27 +16,28 @@
 
 ## Phase 2 — 프론트엔드 embed
 
-- [ ] **Go 모듈 루트 이동**
+- [x] **Go 모듈 루트 이동**
   - `backend/go.mod`, `backend/go.sum` → 프로젝트 루트로 이동
   - `module coffee-of-the-day/backend` → `module coffee-of-the-day` 로 변경
   - 내부 import path는 변경 불필요 (`coffee-of-the-day/backend/...` 형태 유지)
-- [ ] **환경 변수 정리**
-  - `frontend/.env.local` 생성 — `VITE_API_BASE_URL=/api/v1`
-  - `frontend/.env.production` 생성 — `VITE_API_BASE_URL=/api/v1`
-  - `frontend/src/api/client.ts` BASE_URL fallback을 `/api/v1`로 수정
-- [ ] **Vite 프록시 설정**: `vite.config.ts`에 `/api` → `http://localhost:8080` 프록시 추가
-- [ ] **마이그레이션 소스 `iofs` 전환**
-  - `backend/cmd/server/main.go`에 `db/migrations` embed 선언 추가
+- [x] **환경 변수 정리**
+  - `frontend/.env` 생성 — `VITE_API_BASE_URL=/api/v1` (모든 환경 기본값, 커밋됨)
+  - `.env.local`은 `frontend/.gitignore`의 `*.local` 패턴으로 무시되므로 커밋하지 않음
+  - `frontend/src/api/client.ts` BASE_URL fallback을 `/api/v1`로 수정 (`??` → `||`)
+- [x] **Vite 프록시 설정**: `vite.config.ts`에 `/api` → `http://localhost:8080` 프록시 추가
+- [x] **마이그레이션 소스 `iofs` 전환**
+  - `backend/db/embed.go` 생성 (`//go:embed all:migrations`, package db)
   - `runMigrations`를 `iofs` 소스로 교체
-  - `golang-migrate` iofs 의존성 추가 (`go get`)
-- [ ] **`web` 패키지 생성** — embed 진입점
-  - `web/fs.go` 생성 (`//go:embed all:frontend/dist`)
-  - `web/static/.gitkeep` 추가 (빌드 전 `frontend/dist` 미존재 시 컴파일 오류 방지)
-  - `.gitignore`에 `frontend/dist/` 추가
-- [ ] **SPA 핸들러 등록**
+  - `golang-migrate` iofs는 v4.19.1에 포함 (별도 의존성 불필요)
+- [x] **`web` 패키지 생성** — embed 진입점
+  - `web/fs.go` 생성 (`//go:embed all:static`)
+  - Vite outDir을 `../web/static`으로 설정해 빌드 결과물이 embed 대상 경로에 출력
+  - `web/static/.gitkeep` 추가 (빌드 전 컴파일 오류 방지)
+  - `.gitignore` 생성: `web/static/*`, `!web/static/.gitkeep`, `frontend/dist/`
+- [x] **SPA 핸들러 등록**
   - `backend/cmd/server/main.go`에서 `coffee-of-the-day/web` import
   - `/api/v1` 이외 경로 SPA fallback (`index.html`) 처리
-- [ ] **로컬 동작 확인**: `npm run build` 후 `go run ./backend/cmd/server` 로 전체 스택 확인
+- [x] **로컬 동작 확인**: `npm run build` 후 `go build ./...` 및 `go test` 전체 통과
 
 ---
 

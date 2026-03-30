@@ -16,13 +16,15 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/golang-migrate/migrate/v4"
 	migratesqlite3 "github.com/golang-migrate/migrate/v4/database/sqlite3"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/mattn/go-sqlite3"
 
+	coffeedb "coffee-of-the-day/backend/db"
 	"coffee-of-the-day/backend/config"
 	"coffee-of-the-day/backend/internal/handler"
 	"coffee-of-the-day/backend/internal/repository"
 	"coffee-of-the-day/backend/internal/service"
+	"coffee-of-the-day/web"
 )
 
 func main() {
@@ -103,6 +105,10 @@ func main() {
 		})
 	})
 
+	// /api/v1 이외의 모든 경로를 React SPA로 fallback한다.
+	// React Router가 클라이언트 사이드에서 라우팅을 처리한다.
+	r.Handle("/*", web.Handler())
+
 	addr := ":" + cfg.Port
 	srv := &http.Server{
 		Addr:    addr,
@@ -140,7 +146,13 @@ func runMigrations(db *sql.DB) error {
 		return fmt.Errorf("create migration driver: %w", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://db/migrations", "sqlite3", driver)
+	// iofs 소스: embed된 SQL 파일을 사용해 실행 위치에 무관하게 마이그레이션을 실행한다.
+	src, err := iofs.New(coffeedb.MigrationsFS, "migrations")
+	if err != nil {
+		return fmt.Errorf("create migration source: %w", err)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", src, "sqlite3", driver)
 	if err != nil {
 		return fmt.Errorf("create migrator: %w", err)
 	}

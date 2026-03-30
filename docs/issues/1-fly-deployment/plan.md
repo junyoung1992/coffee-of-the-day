@@ -57,23 +57,24 @@ Go 바이너리에 React 빌드 결과물을 포함하는 구조로 전환한다
 
 #### 2-1. 환경 변수 분리
 
-| 파일 | 용도 |
-|------|------|
-| `frontend/.env.local` | 로컬 개발 — `VITE_API_BASE_URL=http://localhost:8080/api/v1` |
-| `frontend/.env.production` | 운영 빌드 — `VITE_API_BASE_URL=` (빈 값 → 상대경로 `/api/v1`) |
+`frontend/.env` 하나로 모든 환경의 기본값을 관리한다:
 
-로컬에서는 Vite dev server가 CORS 없이 직접 백엔드를 호출하므로 절대 URL이 필요하다.
-운영에서는 동일 origin이므로 상대경로(`/api/v1/...`)를 사용한다.
+```
+VITE_API_BASE_URL=/api/v1
+```
+
+`.env.local`은 `frontend/.gitignore`의 `*.local` 패턴으로 git에서 무시되므로 커밋할 수 없다.
+Vite 프록시 덕분에 로컬에서도 상대경로가 동작해 환경별 파일이 불필요하다.
 
 `frontend/src/api/client.ts` BASE_URL 처리:
 ```ts
-// VITE_API_BASE_URL이 빈 문자열이면 상대경로 사용
+// VITE_API_BASE_URL이 빈 문자열이면 상대경로 사용 (?? 대신 ||)
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 ```
 
 #### 2-2. Vite 프록시 설정 (로컬 개발)
 
-로컬에서 Vite dev server(`localhost:5173`)가 `/api/v1`을 백엔드(`localhost:8080`)로 프록시하도록 설정한다.
+로컬에서 Vite dev server(`localhost:5173`)가 `/api`를 백엔드(`localhost:8080`)로 프록시하도록 설정한다.
 이렇게 하면 개발 시에도 브라우저 입장에서는 동일 origin처럼 동작한다.
 
 ```ts
@@ -85,20 +86,21 @@ server: {
 },
 ```
 
-> 프록시를 도입하면 로컬에서도 `VITE_API_BASE_URL`을 상대경로로 통일할 수 있다.
-> `.env.local`에서 `VITE_API_BASE_URL`을 아예 제거하거나 `/api/v1`으로 설정한다.
-
 #### 2-3. Go embed 적용
 
-`backend/`에 embed 진입점 파일을 추가한다:
+`//go:embed`는 선언 파일 기준 상대경로만 허용하고 `..`가 불가하다.
+`frontend/dist`를 embed하려면 선언 파일이 `frontend/`와 같은 레벨에 있어야 한다.
+
+해결책: Vite `outDir`을 `../web/static`으로 변경해 빌드 결과물을 `web/static/`에 출력하고,
+루트의 `web` 패키지에서 embed한다:
 
 ```go
-// backend/embed.go (또는 cmd/server/embed.go)
-//go:embed all:frontend/dist
-var frontendFS embed.FS
+// web/fs.go
+//go:embed all:static
+var staticFS embed.FS
 ```
 
-빌드 시 `frontend/dist/`가 존재해야 하므로, Dockerfile에서 프론트엔드 빌드가 선행되어야 한다.
+`web/static/.gitkeep`을 커밋해 프론트엔드 빌드 전에도 컴파일이 가능하도록 한다.
 
 #### 2-4. SPA Fallback 라우터
 
@@ -106,36 +108,47 @@ var frontendFS embed.FS
 React Router가 클라이언트 사이드 라우팅을 처리한다.
 
 ```go
-r.Handle("/*", http.FileServer(http.FS(frontendFS)))
-// 또는 sub FS + NotFound → index.html 패턴
+// web/fs.go — Handler()가 파일 존재 여부를 확인해 분기
+r.Handle("/*", web.Handler())
 ```
+
+`web.Handler()`는 `fs.Sub(staticFS, "static")`으로 서브 FS를 만든 뒤,
+파일이 존재하면 그대로 서빙하고 없으면 `index.html`로 fallback한다.
 
 #### 2-5. 마이그레이션 소스 변경
 
 현재 `file://db/migrations` 경로는 실행 위치에 의존한다.
-embed와 컨테이너 환경을 고려해 `iofs` 드라이버로 교체한다:
+embed와 컨테이너 환경을 고려해 `iofs` 드라이버로 교체한다.
+
+embed 선언은 `backend/db/` 레벨에서만 `migrations/` 서브디렉토리에 접근 가능하므로
+별도 파일로 분리한다:
 
 ```go
-//go:embed all:db/migrations
-var migrationsFS embed.FS
-
-// migrate.NewWithInstance 대신 iofs 소스 사용
-m, err := migrate.NewWithDatabaseInstance(
-    iofs.New(migrationsFS, "db/migrations"),
-    ...
-)
+// backend/db/embed.go
+//go:embed all:migrations
+var MigrationsFS embed.FS
 ```
+
+```go
+// backend/cmd/server/main.go
+src, err := iofs.New(coffeedb.MigrationsFS, "migrations")
+m, err := migrate.NewWithInstance("iofs", src, "sqlite3", driver)
+```
+
+`iofs`는 `golang-migrate/v4`에 포함되어 별도 의존성 추가가 불필요하다.
 
 ### Phase 3 — 컨테이너화
 
 #### 3-1. 멀티스테이지 Dockerfile
 
 ```
-Stage 1 (node): 프론트엔드 빌드 → dist/
-Stage 2 (go-builder): Stage 1의 dist/를 COPY 후 go build
-Stage 3 (runtime): 최소 이미지 (debian:bookworm-slim 또는 gcr.io/distroless/static)
+Stage 1 (node): 프론트엔드 빌드 → web/static/ (Vite outDir)
+Stage 2 (go-builder): Stage 1의 web/static/ COPY 후 go build (embed 포함)
+Stage 3 (runtime): 최소 이미지 (debian:bookworm-slim)
   + Litestream 바이너리 포함
 ```
+
+Stage 1 빌드 결과물(`web/static/`)을 Stage 2에 COPY하면 `go build` 시 embed가 자동으로 포함된다.
 
 Litestream은 Go 바이너리의 래퍼로 실행된다 (`litestream replicate -exec "./server"`).
 
