@@ -7,7 +7,7 @@ function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
 }
 
-function animateScrollToTop(duration: number) {
+export function animateScrollToTop(duration: number) {
   const start = window.scrollY
   if (start === 0) return
 
@@ -28,12 +28,21 @@ function animateScrollToTop(duration: number) {
   requestAnimationFrame(step)
 }
 
+const SCROLL_THRESHOLD = 300
+
 export function ScrollToTop() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
+    let ticking = false
     function handleScroll() {
-      setVisible(window.scrollY > 300)
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setVisible(window.scrollY > SCROLL_THRESHOLD)
+          ticking = false
+        })
+        ticking = true
+      }
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -44,14 +53,14 @@ export function ScrollToTop() {
     animateScrollToTop(500)
   }, [])
 
-  if (!visible) return null
-
   return (
     <button
       type="button"
       onClick={scrollToTop}
       aria-label="맨 위로 스크롤"
-      className="fixed bottom-6 right-6 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-amber-950/10 bg-white/70 text-stone-600 shadow-lg backdrop-blur-sm transition hover:bg-white hover:text-stone-900"
+      className={`fixed bottom-6 right-6 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-amber-950/10 bg-white/70 text-stone-600 shadow-lg backdrop-blur-sm transition-opacity duration-300 hover:bg-white hover:text-stone-900 ${
+        visible ? 'opacity-100' : 'pointer-events-none opacity-0'
+      }`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

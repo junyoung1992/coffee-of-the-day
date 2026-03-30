@@ -20,16 +20,7 @@ function parseLogType(value: string | null): LogType | undefined {
   return undefined
 }
 
-// URL에 날짜 파라미터가 없을 때 사용할 기본값 (당월 1일)
-function getDefaultDateFrom(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-}
-
-// URL에 날짜 파라미터가 없을 때 사용할 기본값 (오늘)
-function getDefaultDateTo(): string {
-  return new Date().toISOString().slice(0, 10)
-}
+import { getDefaultDateFrom, getDefaultDateTo } from '../utils/date'
 
 export default function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams()

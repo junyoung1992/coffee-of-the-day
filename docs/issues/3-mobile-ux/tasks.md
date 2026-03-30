@@ -61,3 +61,14 @@
   - 헬퍼 함수는 컴포넌트 밖(모듈 스코프)에 선언
   - 기본값을 URL 파라미터에 쓰지 않는다 — URL이 깨끗하게 유지되어야 함
   - FilterBar는 props로 계산된 값을 받으므로 추가 수정 불필요
+
+---
+
+## 리팩토링 (코드 리뷰 반영)
+
+- [x] **`getDefaultDateTo()` 타임존 버그 수정**: UTC `toISOString()` → 로컬 시간 기반으로 변경
+- [x] **날짜 헬퍼 모듈 분리**: `src/utils/date.ts`로 추출, `formatLocalDate` 공통 헬퍼 포함
+- [x] **날짜 헬퍼 단위 테스트**: `src/utils/date.test.ts` (KST 자정 근방 케이스 포함)
+- [x] **ScrollToTop throttling**: `requestAnimationFrame` 기반 scroll 이벤트 throttle 적용
+- [x] **ScrollToTop transition**: `opacity` + `pointer-events`로 부드러운 나타남/사라짐 전환
+- [x] **ScrollToTop 단위 테스트**: `src/components/ScrollToTop.test.tsx` (visible 토글, 버튼 클릭)
