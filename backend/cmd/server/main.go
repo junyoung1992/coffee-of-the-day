@@ -65,8 +65,6 @@ func main() {
 	// CORS는 전역으로 적용: OPTIONS preflight가 JWTMiddleware에 도달하지 않도록
 	r.Use(handler.CORSMiddleware)
 
-	r.Options("/*", func(w http.ResponseWriter, r *http.Request) {})
-
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "ok")
@@ -106,7 +104,7 @@ func main() {
 	})
 
 	// /api/v1 이외의 모든 경로를 React SPA로 fallback한다.
-	// React Router가 클라이언트 사이드에서 라우팅을 처리한다.
+	// CORSMiddleware가 OPTIONS를 미리 처리하므로 r.Options("/*", ...) 없이도 preflight가 동작한다.
 	r.Handle("/*", web.Handler())
 
 	addr := ":" + cfg.Port
