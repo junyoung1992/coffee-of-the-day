@@ -52,7 +52,7 @@
 
 ## Phase 4 — 조회일자 기본값
 
-- [ ] **날짜 기본값 설정**
+- [x] **날짜 기본값 설정**
   - `frontend/src/pages/HomePage.tsx` (line 28-29)
   - `searchParams.get('date_from') ?? ''` → `searchParams.get('date_from') ?? getDefaultDateFrom()`
   - `searchParams.get('date_to') ?? ''` → `searchParams.get('date_to') ?? getDefaultDateTo()`

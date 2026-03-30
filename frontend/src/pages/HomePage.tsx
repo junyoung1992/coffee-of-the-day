@@ -20,13 +20,26 @@ function parseLogType(value: string | null): LogType | undefined {
   return undefined
 }
 
+// URL에 날짜 파라미터가 없을 때 사용할 기본값 (당월 1일)
+function getDefaultDateFrom(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+}
+
+// URL에 날짜 파라미터가 없을 때 사용할 기본값 (오늘)
+function getDefaultDateTo(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
 export default function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // URL 파라미터에서 현재 필터 상태를 파싱한다
+  // URL 파라미터에서 현재 필터 상태를 파싱한다.
+  // 날짜 파라미터가 없으면 당월 1일~오늘을 기본값으로 사용한다.
+  // 기본값은 URL에 쓰지 않아 깨끗한 URL을 유지한다.
   const logType = parseLogType(searchParams.get('log_type'))
-  const dateFrom = searchParams.get('date_from') ?? ''
-  const dateTo = searchParams.get('date_to') ?? ''
+  const dateFrom = searchParams.get('date_from') ?? getDefaultDateFrom()
+  const dateTo = searchParams.get('date_to') ?? getDefaultDateTo()
 
   const {
     data,
