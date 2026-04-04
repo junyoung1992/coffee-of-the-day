@@ -76,6 +76,8 @@ func (r *SQLitePresetRepository) CreatePreset(ctx context.Context, preset domain
 			RecipeDetail: b.RecipeDetail,
 			BrewSteps:    domain.StringsToJSON(b.BrewSteps),
 		})
+	default:
+		return fmt.Errorf("create preset: unsupported log_type: %s", preset.LogType)
 	}
 	if err != nil {
 		return fmt.Errorf("create preset: insert detail: %w", err)
@@ -165,17 +167,23 @@ func (r *SQLitePresetRepository) UpdatePreset(ctx context.Context, preset domain
 	}
 	defer tx.Rollback()
 
-	qtx := r.queries.WithTx(tx)
-
-	err = qtx.UpdatePreset(ctx, db.UpdatePresetParams{
-		Name:      preset.Name,
-		UpdatedAt: preset.UpdatedAt,
-		ID:        preset.ID,
-		UserID:    preset.UserID,
-	})
+	// 공통 테이블 업데이트 + rows affected 확인
+	res, err := tx.ExecContext(ctx,
+		"UPDATE presets SET name = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+		preset.Name, preset.UpdatedAt, preset.ID, preset.UserID,
+	)
 	if err != nil {
 		return fmt.Errorf("update preset: update common: %w", err)
 	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("update preset: rows affected: %w", err)
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+
+	qtx := r.queries.WithTx(tx)
 
 	// 프리셋 타입에 따라 서브 테이블 업데이트
 	switch preset.LogType {
@@ -196,6 +204,8 @@ func (r *SQLitePresetRepository) UpdatePreset(ctx context.Context, preset domain
 			BrewSteps:    domain.StringsToJSON(b.BrewSteps),
 			PresetID:     preset.ID,
 		})
+	default:
+		return fmt.Errorf("update preset: unsupported log_type: %s", preset.LogType)
 	}
 	if err != nil {
 		return fmt.Errorf("update preset: update detail: %w", err)
@@ -223,14 +233,19 @@ func (r *SQLitePresetRepository) DeletePreset(ctx context.Context, presetID, use
 }
 
 func (r *SQLitePresetRepository) UpdateLastUsedAt(ctx context.Context, presetID, userID string, usedAt string) error {
-	err := r.queries.UpdatePresetLastUsedAt(ctx, db.UpdatePresetLastUsedAtParams{
-		LastUsedAt: &usedAt,
-		UpdatedAt:  usedAt,
-		ID:         presetID,
-		UserID:     userID,
-	})
+	res, err := r.sqlDB.ExecContext(ctx,
+		"UPDATE presets SET last_used_at = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+		usedAt, usedAt, presetID, userID,
+	)
 	if err != nil {
 		return fmt.Errorf("update last used at: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("update last used at: rows affected: %w", err)
+	}
+	if n == 0 {
+		return ErrNotFound
 	}
 	return nil
 }

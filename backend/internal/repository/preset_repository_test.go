@@ -310,6 +310,39 @@ func TestPresetRepository_UpdateLastUsedAt(t *testing.T) {
 	assert.Equal(t, usedAt, *got.LastUsedAt)
 }
 
+func TestPresetRepository_UpdateNotFound(t *testing.T) {
+	sqlDB := setupPresetTestDB(t)
+	repo := NewSQLitePresetRepository(sqlDB)
+	ctx := context.Background()
+
+	p := newCafePreset("nonexistent", "없는 프리셋")
+	err := repo.UpdatePreset(ctx, p)
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestPresetRepository_UpdateOtherUserDenied(t *testing.T) {
+	sqlDB := setupPresetTestDB(t)
+	repo := NewSQLitePresetRepository(sqlDB)
+	ctx := context.Background()
+
+	p := newCafePreset("preset-upd-deny", "내 프리셋")
+	require.NoError(t, repo.CreatePreset(ctx, p))
+
+	// 다른 사용자로 수정 시도
+	p.UserID = otherUserID
+	err := repo.UpdatePreset(ctx, p)
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestPresetRepository_UpdateLastUsedAtNotFound(t *testing.T) {
+	sqlDB := setupPresetTestDB(t)
+	repo := NewSQLitePresetRepository(sqlDB)
+	ctx := context.Background()
+
+	err := repo.UpdateLastUsedAt(ctx, "nonexistent", testUserID, "2026-04-04T12:00:00Z")
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
 func TestPresetRepository_CascadeDelete(t *testing.T) {
 	sqlDB := setupPresetTestDB(t)
 	repo := NewSQLitePresetRepository(sqlDB)

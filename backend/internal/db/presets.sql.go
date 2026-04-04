@@ -9,21 +9,6 @@ import (
 	"context"
 )
 
-const deletePreset = `-- name: DeletePreset :exec
-DELETE FROM presets
-WHERE id = ? AND user_id = ?
-`
-
-type DeletePresetParams struct {
-	ID     string `json:"id"`
-	UserID string `json:"user_id"`
-}
-
-func (q *Queries) DeletePreset(ctx context.Context, arg DeletePresetParams) error {
-	_, err := q.db.ExecContext(ctx, deletePreset, arg.ID, arg.UserID)
-	return err
-}
-
 const getPresetByID = `-- name: GetPresetByID :one
 SELECT id, user_id, name, log_type, last_used_at, created_at, updated_at
 FROM presets
@@ -114,50 +99,4 @@ func (q *Queries) ListPresetsByUserID(ctx context.Context, userID string) ([]Pre
 		return nil, err
 	}
 	return items, nil
-}
-
-const updatePreset = `-- name: UpdatePreset :exec
-UPDATE presets
-SET name = ?, updated_at = ?
-WHERE id = ? AND user_id = ?
-`
-
-type UpdatePresetParams struct {
-	Name      string `json:"name"`
-	UpdatedAt string `json:"updated_at"`
-	ID        string `json:"id"`
-	UserID    string `json:"user_id"`
-}
-
-func (q *Queries) UpdatePreset(ctx context.Context, arg UpdatePresetParams) error {
-	_, err := q.db.ExecContext(ctx, updatePreset,
-		arg.Name,
-		arg.UpdatedAt,
-		arg.ID,
-		arg.UserID,
-	)
-	return err
-}
-
-const updatePresetLastUsedAt = `-- name: UpdatePresetLastUsedAt :exec
-UPDATE presets
-SET last_used_at = ?, updated_at = ?
-WHERE id = ? AND user_id = ?
-`
-
-type UpdatePresetLastUsedAtParams struct {
-	LastUsedAt *string `json:"last_used_at"`
-	UpdatedAt  string  `json:"updated_at"`
-	ID         string  `json:"id"`
-	UserID     string  `json:"user_id"`
-}
-
-func (q *Queries) UpdatePresetLastUsedAt(ctx context.Context, arg UpdatePresetLastUsedAtParams) error {
-	_, err := q.db.ExecContext(ctx, updatePresetLastUsedAt,
-		arg.LastUsedAt,
-		arg.UpdatedAt,
-		arg.ID,
-		arg.UserID,
-	)
-	return err
 }

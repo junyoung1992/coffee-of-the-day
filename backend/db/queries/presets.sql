@@ -13,16 +13,3 @@ FROM presets
 WHERE user_id = ?
 ORDER BY CASE WHEN last_used_at IS NULL THEN 1 ELSE 0 END, last_used_at DESC, created_at DESC;
 
--- name: UpdatePreset :exec
-UPDATE presets
-SET name = ?, updated_at = ?
-WHERE id = ? AND user_id = ?;
-
--- name: UpdatePresetLastUsedAt :exec
-UPDATE presets
-SET last_used_at = ?, updated_at = ?
-WHERE id = ? AND user_id = ?;
-
--- name: DeletePreset :exec
-DELETE FROM presets
-WHERE id = ? AND user_id = ?;

@@ -7,7 +7,7 @@
 
 ## High
 
-- [ ] **`UpdatePreset` / `UpdateLastUsedAt` rows affected 확인**
+- [x] **`UpdatePreset` / `UpdateLastUsedAt` rows affected 확인**
   - Target: `backend/internal/repository/preset_repository.go`
   - `UpdatePreset`과 `UpdateLastUsedAt`이 대상 row가 없어도 에러 없이 성공하는 문제
   - `DeletePreset`과 동일하게 raw SQL + `RowsAffected() == 0` 시 `ErrNotFound` 반환 패턴 적용
@@ -30,7 +30,7 @@
 
 ## Medium
 
-- [ ] **`CreatePreset` / `UpdatePreset` switch default case 추가**
+- [x] **`CreatePreset` / `UpdatePreset` switch default case 추가**
   - Target: `backend/internal/repository/preset_repository.go`
   - `CreatePreset`(62행)과 `UpdatePreset`(181행)의 switch문에 default error case 추가
   - `default: return fmt.Errorf("...: unsupported log_type: %s", preset.LogType)`
@@ -50,6 +50,6 @@
   - Target: `frontend/src/hooks/usePresets.ts`
   - `PRESET_KEYS.detail(id)` 무효화 제거, `PRESET_KEYS.all`만 유지
 
-- [ ] **sqlc `DeletePreset` dead code 제거**
+- [x] **sqlc `DeletePreset` dead code 제거**
   - Target: `backend/db/queries/presets.sql`
   - 미사용 `DeletePreset` 쿼리 제거 후 `sqlc generate` 재실행
