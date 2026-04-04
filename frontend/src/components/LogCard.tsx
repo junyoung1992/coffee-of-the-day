@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import type { CoffeeLogFull } from '../types/log'
 import { RatingDisplay } from './RatingDisplay'
 
@@ -82,6 +82,7 @@ export function LogCardSkeleton() {
 }
 
 export function LogCard({ log }: { log: CoffeeLogFull }) {
+  const navigate = useNavigate()
   const title = log.log_type === 'cafe' ? log.cafe.coffee_name : log.brew.bean_name
   const subtitle =
     log.log_type === 'cafe'
@@ -148,7 +149,17 @@ export function LogCard({ log }: { log: CoffeeLogFull }) {
       </div>
 
       <div className="mt-5 flex items-center justify-between border-t border-amber-950/10 pt-4 text-sm font-medium text-stone-700">
-        <span>Detail</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            navigate('/logs/new', { state: { cloneFrom: log } })
+          }}
+          className="rounded-full border border-amber-950/10 px-3 py-1.5 text-xs font-semibold text-stone-600 transition hover:border-amber-900/25 hover:bg-amber-50"
+        >
+          복제
+        </button>
         <span className="transition group-hover:translate-x-1">View log</span>
       </div>
     </Link>

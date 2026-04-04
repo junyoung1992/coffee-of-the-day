@@ -30,12 +30,6 @@ export function Layout({ title, description, actions, children }: LayoutProps) {
             {user ? (
               <span className="hidden text-sm text-stone-500 sm:block">{user.display_name}</span>
             ) : null}
-            <Link
-              to="/logs/new"
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold !text-white transition hover:bg-amber-900 hover:!text-white"
-            >
-              New Log
-            </Link>
             <button
               onClick={() => logout.mutate()}
               disabled={logout.isPending}
