@@ -206,6 +206,29 @@ export function logToFormState(log: CoffeeLogFull): LogFormState {
   return state
 }
 
+/**
+ * 기존 로그를 복제하여 새 로그 작성 폼의 초기값으로 변환한다.
+ * logToFormState()로 원본을 변환한 뒤, 복제 시 리셋할 필드를 초기화한다.
+ */
+export function cloneToFormState(log: CoffeeLogFull, now = new Date()): LogFormState {
+  const state = logToFormState(log)
+
+  // 리셋 대상 필드
+  state.recordedAt = toDateTimeLocal(now)
+  state.companions = []
+  state.memo = ''
+
+  if (state.logType === 'cafe') {
+    state.cafe.rating = ''
+    state.cafe.impressions = ''
+  } else {
+    state.brew.rating = ''
+    state.brew.impressions = ''
+  }
+
+  return state
+}
+
 export function buildLogPayload(state: LogFormState): CreateLogInput {
   const payload: CreateLogInput = {
     recorded_at: toApiRecordedAt(state.recordedAt),
