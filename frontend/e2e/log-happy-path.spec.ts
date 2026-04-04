@@ -29,15 +29,18 @@ test('brew happy-path CRUD flow works end-to-end', async ({ page }) => {
   const beanName = `E2E Brew Bean ${Date.now()}`
   const updatedBeanName = `${beanName} Updated`
 
-  await page.getByRole('link', { name: '오늘의 기록 추가' }).click()
+  await page.getByRole('link', { name: '기록 추가' }).click()
   await expect(page).toHaveURL('/logs/new')
 
   await page.getByRole('button', { name: /Brew log/ }).click()
   await page.getByLabel('Recorded at').fill('2026-03-29T09:30')
-  await page.getByLabel('Companions').fill('민수, 지연')
-  await page.getByLabel('Memo').fill('E2E로 생성한 브루 로그입니다.')
   await page.getByLabel('Bean name').fill(beanName)
   await page.getByRole('button', { name: 'AeroPress 압력 + 침지', exact: true }).click()
+
+  // 선택 영역을 펼쳐야 Companions, Memo 등에 접근할 수 있다
+  await page.getByRole('button', { name: '더 기록하기' }).click()
+  await page.getByLabel('Companions').fill('민수, 지연')
+  await page.getByLabel('Memo').fill('E2E로 생성한 브루 로그입니다.')
   await page.getByLabel('Brew device').fill('AeroPress Go')
   await page.getByLabel('Grind size').fill('18 clicks')
   await page.getByLabel(/Coffee \(g\)/).fill('18')
@@ -81,6 +84,52 @@ test('brew happy-path CRUD flow works end-to-end', async ({ page }) => {
 
   await expect(page).toHaveURL('/')
   await expect(page.getByRole('link', { name: new RegExp(updatedBeanName) })).toHaveCount(0)
+})
+
+test('clone from detail page creates a new log with pre-filled data', async ({ page }) => {
+  const originalBean = `E2E Clone Source ${Date.now()}`
+
+  // 1. 원본 로그 생성
+  await page.getByRole('link', { name: '기록 추가' }).click()
+  await page.getByRole('button', { name: /Brew log/ }).click()
+  await page.getByLabel(/Recorded at/).fill('2026-04-01T10:00')
+  await page.getByLabel('Bean name').fill(originalBean)
+  await page.getByRole('button', { name: 'AeroPress 압력 + 침지', exact: true }).click()
+  await page.getByRole('button', { name: '기록 추가' }).click()
+  await expect(page).toHaveURL(/\/logs\/.+$/)
+  await expect(page.getByRole('heading', { name: originalBean })).toBeVisible()
+
+  // 2. 상세 화면에서 "다시 쓰기" 클릭
+  await page.getByRole('button', { name: '복제' }).click()
+  await expect(page).toHaveURL('/logs/new')
+
+  // 3. 복제 폼 검증 — 원본 필드 유지, 리셋 필드 초기화
+  await expect(page.getByText('기록 복제')).toBeVisible()
+  const beanInput = page.getByLabel('Bean name')
+  await expect(beanInput).toHaveValue(originalBean)
+  // recordedAt은 원본(2026-04-01)이 아닌 오늘 날짜여야 한다
+  const recordedAtValue = await page.getByLabel(/Recorded at/).inputValue()
+  expect(recordedAtValue).not.toContain('2026-04-01')
+
+  // 4. 저장하여 새 로그 생성
+  await page.getByRole('button', { name: '기록 추가' }).click()
+  await expect(page).toHaveURL(/\/logs\/.+$/)
+  await expect(page.getByRole('heading', { name: originalBean })).toBeVisible()
+
+  // 5. 목록에서 원본과 복제본 모두 존재하는지 확인
+  await page.getByRole('link', { name: '목록으로' }).click()
+  await page.getByRole('button', { name: '브루' }).click()
+  const cards = page.getByRole('link', { name: new RegExp(originalBean) })
+  await expect(cards).toHaveCount(2)
+
+  // 정리: 두 로그 모두 삭제
+  for (let i = 0; i < 2; i++) {
+    await cards.first().click()
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: '삭제' }).click()
+    await expect(page).toHaveURL('/')
+    if (i === 0) await page.getByRole('button', { name: '브루' }).click()
+  }
 })
 
 test('logout redirects to login page', async ({ page }) => {
