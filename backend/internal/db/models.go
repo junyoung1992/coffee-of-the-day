@@ -25,6 +25,14 @@ type BrewLog struct {
 	Rating        *float64 `json:"rating"`
 }
 
+type BrewPreset struct {
+	PresetID     string  `json:"preset_id"`
+	BeanName     string  `json:"bean_name"`
+	BrewMethod   string  `json:"brew_method"`
+	RecipeDetail *string `json:"recipe_detail"`
+	BrewSteps    string  `json:"brew_steps"`
+}
+
 type CafeLog struct {
 	LogID       string   `json:"log_id"`
 	CafeName    string   `json:"cafe_name"`
@@ -39,6 +47,13 @@ type CafeLog struct {
 	Rating      *float64 `json:"rating"`
 }
 
+type CafePreset struct {
+	PresetID    string `json:"preset_id"`
+	CafeName    string `json:"cafe_name"`
+	CoffeeName  string `json:"coffee_name"`
+	TastingTags string `json:"tasting_tags"`
+}
+
 type CoffeeLog struct {
 	ID         string  `json:"id"`
 	UserID     string  `json:"user_id"`
@@ -46,6 +61,16 @@ type CoffeeLog struct {
 	Companions string  `json:"companions"`
 	LogType    string  `json:"log_type"`
 	Memo       *string `json:"memo"`
+	CreatedAt  string  `json:"created_at"`
+	UpdatedAt  string  `json:"updated_at"`
+}
+
+type Preset struct {
+	ID         string  `json:"id"`
+	UserID     string  `json:"user_id"`
+	Name       string  `json:"name"`
+	LogType    string  `json:"log_type"`
+	LastUsedAt *string `json:"last_used_at"`
 	CreatedAt  string  `json:"created_at"`
 	UpdatedAt  string  `json:"updated_at"`
 }

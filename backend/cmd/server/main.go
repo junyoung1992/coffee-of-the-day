@@ -50,6 +50,10 @@ func main() {
 	logSvc := service.NewLogService(logRepo)
 	logHandler := handler.NewLogHandler(logSvc)
 
+	presetRepo := repository.NewSQLitePresetRepository(db)
+	presetSvc := service.NewPresetService(presetRepo)
+	presetHandler := handler.NewPresetHandler(presetSvc)
+
 	suggestionRepo := repository.NewSQLiteSuggestionRepository(db)
 	suggestionSvc := service.NewSuggestionService(suggestionRepo)
 	suggestionHandler := handler.NewSuggestionHandler(suggestionSvc)
@@ -94,6 +98,15 @@ func main() {
 				r.Get("/{id}", logHandler.GetLog)
 				r.Put("/{id}", logHandler.UpdateLog)
 				r.Delete("/{id}", logHandler.DeleteLog)
+			})
+
+			r.Route("/presets", func(r chi.Router) {
+				r.Post("/", presetHandler.CreatePreset)
+				r.Get("/", presetHandler.ListPresets)
+				r.Get("/{id}", presetHandler.GetPreset)
+				r.Put("/{id}", presetHandler.UpdatePreset)
+				r.Delete("/{id}", presetHandler.DeletePreset)
+				r.Post("/{id}/use", presetHandler.UsePreset)
 			})
 
 			r.Route("/suggestions", func(r chi.Router) {

@@ -8,7 +8,7 @@
 
 ## 1. 데이터베이스 마이그레이션
 
-- [ ] **마이그레이션 파일 생성**
+- [x] **마이그레이션 파일 생성**
   - Target: `backend/db/migrations/007_create_presets.up.sql`
   - `presets` 테이블 생성 (id, user_id, name, log_type, last_used_at, created_at, updated_at)
   - `cafe_presets` 테이블 생성 (preset_id FK, cafe_name, coffee_name, tasting_tags)
@@ -17,7 +17,7 @@
   - ON DELETE CASCADE 설정
   - `plan.md`의 테이블 구조 참조
 
-- [ ] **down 마이그레이션 파일 생성**
+- [x] **down 마이그레이션 파일 생성**
   - Target: `backend/db/migrations/007_create_presets.down.sql`
   - `brew_presets`, `cafe_presets`, `presets` 순서로 DROP TABLE
 
@@ -25,7 +25,7 @@
 
 ## 2. 백엔드 Domain 모델
 
-- [ ] **프리셋 도메인 타입 정의**
+- [x] **프리셋 도메인 타입 정의**
   - Target: `backend/internal/domain/preset.go` (신규)
   - `Preset`, `CafePresetDetail`, `BrewPresetDetail`, `PresetFull` 구조체 정의
   - 기존 `domain/log.go`의 `CoffeeLogFull` 패턴 참조
@@ -35,7 +35,7 @@
 
 ## 3. 백엔드 Repository
 
-- [ ] **sqlc 쿼리 파일 작성**
+- [x] **sqlc 쿼리 파일 작성**
   - Target: `backend/db/queries/presets.sql` (신규)
   - Target: `backend/db/queries/cafe_presets.sql` (신규)
   - Target: `backend/db/queries/brew_presets.sql` (신규)
@@ -44,7 +44,7 @@
   - `last_used_at` 갱신 전용 UPDATE 쿼리
   - `sqlc generate` 실행하여 Go 코드 생성
 
-- [ ] **PresetRepository 구현**
+- [x] **PresetRepository 구현**
   - Target: `backend/internal/repository/preset_repository.go` (신규)
   - `PresetRepository` interface 정의
   - `SQLitePresetRepository` 구현
@@ -56,7 +56,7 @@
   - `UpdateLastUsedAt`: last_used_at 필드만 갱신
   - JSON 배열 직렬화/역직렬화: 기존 `log_repository.go`의 `tasting_tags`, `brew_steps` 처리 패턴 참조
 
-- [ ] **Repository 테스트 작성**
+- [x] **Repository 테스트 작성**
   - Target: `backend/internal/repository/preset_repository_test.go` (신규)
   - CRUD happy path 테스트
   - 정렬 검증: last_used_at이 있는 프리셋이 NULL인 것보다 먼저 나오는지
@@ -67,7 +67,7 @@
 
 ## 4. 백엔드 Service
 
-- [ ] **PresetService 구현**
+- [x] **PresetService 구현**
   - Target: `backend/internal/service/preset_service.go` (신규)
   - `NewPresetService(repo PresetRepository)` 생성자
   - `CreatePreset`: name trim + 빈 문자열 검증, log_type 검증, cafe/brew 일치 검증, UUID 생성 (`crypto/rand`), 타임스탬프 설정
@@ -77,7 +77,7 @@
   - `DeletePreset`: repository 위임
   - `UsePreset`: 프리셋 존재 확인 + `UpdateLastUsedAt` 호출 (현재 시각 RFC3339)
 
-- [ ] **Service 테스트 작성**
+- [x] **Service 테스트 작성**
   - Target: `backend/internal/service/preset_service_test.go` (신규)
   - 검증 로직 테스트: 빈 이름, 잘못된 log_type, cafe 프리셋에 brew 데이터 전달 등
   - mock repository 사용 (기존 `log_service_test.go` 패턴 참조)
@@ -87,7 +87,7 @@
 
 ## 5. 백엔드 Handler
 
-- [ ] **PresetHandler 구현**
+- [x] **PresetHandler 구현**
   - Target: `backend/internal/handler/preset_handler.go` (신규)
   - JSON 요청/응답 타입 정의 (handler 내부, 기존 `log_handler.go` 패턴)
   - `NewPresetHandler(svc PresetService)` 생성자
@@ -96,13 +96,13 @@
   - 에러 매핑: `ErrNotFound` → 404, `ValidationError` → 400
   - userID는 `r.Context().Value("user_id").(string)`로 추출 (기존 패턴)
 
-- [ ] **Handler 테스트 작성**
+- [x] **Handler 테스트 작성**
   - Target: `backend/internal/handler/preset_handler_test.go` (신규)
   - 요청/응답 직렬화 테스트
   - 에러 케이스 (400, 404) 테스트
   - 기존 `log_handler_test.go` 패턴 참조
 
-- [ ] **라우터 등록**
+- [x] **라우터 등록**
   - Target: `backend/cmd/server/main.go`
   - 의존성 연결: `NewSQLitePresetRepository` → `NewPresetService` → `NewPresetHandler`
   - 인증 필요 라우트 그룹 내에 `/presets` 라우트 추가
