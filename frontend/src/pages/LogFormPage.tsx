@@ -12,6 +12,7 @@ import { RatingInput } from '../components/RatingInput'
 import { TagInput } from '../components/TagInput'
 import { ApiError } from '../api/client'
 import { useCreateLog, useLog, useUpdateLog } from '../hooks/useLogs'
+import { usePresetList, useUsePreset } from '../hooks/usePresets'
 import { useCompanionSuggestions, useTagSuggestions } from '../hooks/useSuggestions'
 import {
   brewMethodOptions,
@@ -20,11 +21,13 @@ import {
   createEmptyFormState,
   hasOptionalValues,
   logToFormState,
+  presetToFormState,
   roastLevelOptions,
   type FormLogType,
   type LogFormState,
 } from './logFormState'
 import type { CoffeeLogFull } from '../types/log'
+import type { PresetFull } from '../types/preset'
 
 // --- 공통 UI 유틸 ---
 
@@ -158,6 +161,53 @@ function LogTypeSection({
         })}
       </div>
     </Section>
+  )
+}
+
+function PresetSection({
+  logType,
+  onSelect,
+}: {
+  logType: FormLogType
+  onSelect: (preset: PresetFull) => void
+}) {
+  const { data: presets = [] } = usePresetList()
+  const usePreset = useUsePreset()
+
+  // 현재 logType에 맞는 프리셋만 필터링
+  const filtered = presets.filter((p) => p.log_type === logType)
+
+  if (filtered.length === 0) return null
+
+  function handleSelect(preset: PresetFull) {
+    onSelect(preset)
+    usePreset.mutate(preset.id)
+  }
+
+  return (
+    <section className="space-y-3 rounded-[1.75rem] border border-amber-950/10 bg-stone-50/65 p-5 sm:p-6">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold text-stone-950">프리셋</h2>
+        <p className="text-sm text-stone-600">저장된 조합을 선택하면 필드가 자동으로 채워집니다.</p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {filtered.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => handleSelect(preset)}
+            className="rounded-2xl border border-amber-950/10 bg-white p-4 text-left transition hover:border-amber-900/25 hover:bg-amber-50/60"
+          >
+            <p className="text-sm font-semibold text-stone-900">{preset.name}</p>
+            <p className="mt-1 text-xs text-stone-500">
+              {preset.log_type === 'cafe'
+                ? `${preset.cafe.cafe_name} · ${preset.cafe.coffee_name}`
+                : `${preset.brew.bean_name} · ${preset.brew.brew_method.replace('_', ' ')}`}
+            </p>
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -869,6 +919,16 @@ export default function LogFormPage() {
             disabled={isEditMode || isCloneMode}
             error={fieldErrors['log_type']}
           />
+          {!isEditMode && !isCloneMode ? (
+            <PresetSection
+              logType={form.logType}
+              onSelect={(preset) => {
+                const formState = presetToFormState(preset)
+                setForm(formState)
+                setExpanded(hasOptionalValues(formState))
+              }}
+            />
+          ) : null}
           {form.logType === 'cafe' ? (
             <CafeFieldsSection form={form} setForm={setForm} fieldErrors={fieldErrors} expanded={expanded} onToggle={toggleExpanded} />
           ) : (

@@ -55,6 +55,7 @@ docs/
   - Review `docs/spec.md` to ensure it reflects the current application state.
 - Follow the Conventional Commits specification. Always include a description body, not just the subject line. Commit messages must be written in English.
 - Do not create commits automatically. Commit only after review is completed and the user explicitly requests it.
+- PRs are **squash-merged** into main. After merge, delete the feature branch (both remote and local).
 
 ### Backend
 

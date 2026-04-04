@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS brew_presets;
+DROP TABLE IF EXISTS cafe_presets;
+DROP TABLE IF EXISTS presets;

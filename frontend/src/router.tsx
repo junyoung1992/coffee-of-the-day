@@ -4,6 +4,7 @@ import { ScrollToTop } from './components/ScrollToTop'
 import HomePage from './pages/HomePage'
 import LogDetailPage from './pages/LogDetailPage'
 import LogFormPage from './pages/LogFormPage'
+import PresetsPage from './pages/PresetsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
           { path: '/logs/new', element: <LogFormPage /> },
           { path: '/logs/:id', element: <LogDetailPage /> },
           { path: '/logs/:id/edit', element: <LogFormPage /> },
+          { path: '/presets', element: <PresetsPage /> },
         ],
       },
     ],

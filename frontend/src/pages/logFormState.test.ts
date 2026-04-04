@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildLogPayload, cloneToFormState, createEmptyFormState, hasOptionalValues, logToFormState } from './logFormState'
+import { buildLogPayload, cloneToFormState, createEmptyFormState, hasOptionalValues, logToFormState, presetToFormState } from './logFormState'
 import type { CafeLogFull, BrewLogFull, CoffeeLogFull } from '../types/log'
+import type { CafePresetFull, BrewPresetFull } from '../types/preset'
 
 describe('createEmptyFormState', () => {
   it('신규 폼의 기본값을 만든다', () => {
@@ -280,5 +281,85 @@ describe('hasOptionalValues', () => {
     state.logType = 'brew'
     state.brew.brewSteps = ['뜸 30초']
     expect(hasOptionalValues(state)).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// presetToFormState
+// ---------------------------------------------------------------------------
+
+const presetNow = new Date('2026-04-04T08:00:00')
+
+const cafePreset: CafePresetFull = {
+  id: 'preset-1',
+  user_id: 'user-1',
+  name: '출근길 아메리카노',
+  log_type: 'cafe',
+  last_used_at: null,
+  created_at: '2026-04-01T00:00:00Z',
+  updated_at: '2026-04-01T00:00:00Z',
+  cafe: {
+    cafe_name: '블루보틀',
+    coffee_name: '싱글 오리진',
+    tasting_tags: ['fruity', 'floral'],
+  },
+}
+
+const brewPreset: BrewPresetFull = {
+  id: 'preset-2',
+  user_id: 'user-1',
+  name: '주말 핸드드립',
+  log_type: 'brew',
+  last_used_at: null,
+  created_at: '2026-04-01T00:00:00Z',
+  updated_at: '2026-04-01T00:00:00Z',
+  brew: {
+    bean_name: '에티오피아 예가체프',
+    brew_method: 'pour_over',
+    recipe_detail: 'V60 레시피',
+    brew_steps: ['뜸들이기 30초', '1차 주수'],
+  },
+}
+
+describe('presetToFormState', () => {
+  it('카페 프리셋의 전용 필드를 채운다', () => {
+    const state = presetToFormState(cafePreset, presetNow)
+
+    expect(state.logType).toBe('cafe')
+    expect(state.cafe.cafeName).toBe('블루보틀')
+    expect(state.cafe.coffeeName).toBe('싱글 오리진')
+    expect(state.cafe.tastingTags).toEqual(['fruity', 'floral'])
+  })
+
+  it('카페 프리셋에서 리셋 대상 필드는 빈 값이다', () => {
+    const state = presetToFormState(cafePreset, presetNow)
+
+    expect(state.recordedAt).toBe('2026-04-04T08:00')
+    expect(state.companions).toEqual([])
+    expect(state.memo).toBe('')
+    expect(state.cafe.rating).toBe('')
+    expect(state.cafe.impressions).toBe('')
+  })
+
+  it('브루 프리셋의 전용 필드를 채운다', () => {
+    const state = presetToFormState(brewPreset, presetNow)
+
+    expect(state.logType).toBe('brew')
+    expect(state.brew.beanName).toBe('에티오피아 예가체프')
+    expect(state.brew.brewMethod).toBe('pour_over')
+    expect(state.brew.brewSteps).toEqual(['뜸들이기 30초', '1차 주수'])
+  })
+
+  it('브루 프리셋의 recipe_detail은 memo에 매핑된다', () => {
+    const state = presetToFormState(brewPreset, presetNow)
+
+    expect(state.memo).toBe('V60 레시피')
+  })
+
+  it('브루 프리셋에서 리셋 대상 필드는 빈 값이다', () => {
+    const state = presetToFormState(brewPreset, presetNow)
+
+    expect(state.brew.rating).toBe('')
+    expect(state.brew.impressions).toBe('')
   })
 })
