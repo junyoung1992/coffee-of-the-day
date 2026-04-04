@@ -232,11 +232,11 @@
 
 ## 12. 검증
 
-- [ ] **백엔드 테스트 실행**
+- [x] **백엔드 테스트 실행**
   - `cd backend && go test ./...` 전체 통과 확인
   - 특히 preset 관련 테스트: repository, service, handler
 
-- [ ] **프론트엔드 테스트 실행**
+- [x] **프론트엔드 테스트 실행**
   - `cd frontend && npm test` 전체 통과 확인
   - 특히 logFormState, usePresets, LogFormPage 테스트
 
@@ -246,7 +246,7 @@
   - 프리셋 관리 → 수정/삭제 동작 확인
   - 프리셋 목록 정렬: 최근 사용순 확인
 
-- [ ] **문서 갱신 확인**
+- [x] **문서 갱신 확인**
   - `docs/spec.md` 반영 확인 (Task 시작 전에 이미 갱신됨)
   - `docs/openapi.yml` 반영 확인 (Task 6에서 갱신)
   - `docs/arch/backend.md` 업데이트 필요 여부 확인 (새 vertical slice 추가에 대한 언급)
