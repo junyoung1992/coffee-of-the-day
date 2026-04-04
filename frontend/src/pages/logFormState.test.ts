@@ -288,7 +288,7 @@ describe('hasOptionalValues', () => {
 // presetToFormState
 // ---------------------------------------------------------------------------
 
-const presetNow = new Date('2026-04-04T08:00:00+09:00')
+const presetNow = new Date('2026-04-04T08:00:00')
 
 const cafePreset: CafePresetFull = {
   id: 'preset-1',
