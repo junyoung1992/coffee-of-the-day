@@ -165,7 +165,7 @@
 
 의존: Task 8 완료 후.
 
-- [ ] **presetToFormState 함수 추가**
+- [x] **presetToFormState 함수 추가**
   - Target: `frontend/src/pages/logFormState.ts`
   - `presetToFormState(preset: PresetFull, now?: Date): LogFormState` 함수 추가
   - 동작: 프리셋의 log_type과 전용 필드를 폼 상태로 변환
@@ -174,12 +174,12 @@
   - recorded_at은 현재 시각, rating/memo/companions/impressions는 빈 값
   - 기존 `cloneToFormState()` 패턴 참조
 
-- [ ] **presetToFormState 테스트**
+- [x] **presetToFormState 테스트**
   - Target: `frontend/src/pages/logFormState.test.ts`
   - cafe/brew 프리셋 각각에 대해 변환 결과 검증
   - 리셋 필드가 올바르게 초기화되는지 확인
 
-- [ ] **프리셋 선택 UI 컴포넌트 추가**
+- [x] **프리셋 선택 UI 컴포넌트 추가**
   - Target: `frontend/src/pages/LogFormPage.tsx`
   - LogTypeSection 아래에 프리셋 선택 섹션 추가
   - `usePresetList()` 호출하여 현재 logType에 맞는 프리셋 필터링
@@ -194,7 +194,7 @@
 
 의존: Task 8 완료 후. Task 9와 병렬 가능.
 
-- [ ] **"프리셋으로 저장" 버튼 및 이름 입력 UI 추가**
+- [x] **"프리셋으로 저장" 버튼 및 이름 입력 UI 추가**
   - Target: `frontend/src/pages/LogDetailPage.tsx`
   - actions 영역에 "프리셋으로 저장" 버튼 추가 (기존 복제 버튼 옆)
   - 클릭 시 프리셋 이름 입력용 모달 또는 인라인 input 표시
@@ -210,7 +210,7 @@
 
 의존: Task 8 완료 후. Task 9, 10과 병렬 가능.
 
-- [ ] **프리셋 관리 페이지 구현**
+- [x] **프리셋 관리 페이지 구현**
   - Target: `frontend/src/pages/PresetsPage.tsx` (신규)
   - `usePresetList()` 호출하여 목록 표시
   - 카드 형태로 표시: 이름, log_type 뱃지, 주요 정보 (cafe_name/bean_name 등)
@@ -220,11 +220,11 @@
   - 수정: 모달 형태로 이름 + 세부 필드 편집 가능, `useUpdatePreset()` 호출
   - Layout 컴포넌트 사용 (기존 페이지 패턴)
 
-- [ ] **라우터에 프리셋 페이지 등록**
+- [x] **라우터에 프리셋 페이지 등록**
   - Target: `frontend/src/router.tsx`
   - ProtectedRoute children에 `{ path: '/presets', element: <PresetsPage /> }` 추가
 
-- [ ] **네비게이션 링크 추가**
+- [x] **네비게이션 링크 추가**
   - Target: `frontend/src/components/Layout.tsx` 또는 `frontend/src/pages/HomePage.tsx`
   - 프리셋 관리 화면으로의 링크 추가 (위치는 기존 UI 구조에 맞게 결정)
 

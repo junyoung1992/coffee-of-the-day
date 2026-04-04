@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RatingDisplay } from '../components/RatingDisplay'
 import { useDeleteLog, useLog } from '../hooks/useLogs'
+import { useCreatePreset } from '../hooks/usePresets'
 import type { ApiErrorLike } from '../types/common'
+import type { CoffeeLogFull } from '../types/log'
+import type { CreatePresetInput } from '../types/preset'
 
 const roastLabels = {
   dark: 'Dark',
@@ -49,12 +53,37 @@ function DetailField({ label, value }: { label: string; value?: string | null })
   )
 }
 
+function buildPresetBody(log: CoffeeLogFull, name: string): CreatePresetInput {
+  const body: CreatePresetInput = {
+    name,
+    log_type: log.log_type,
+  }
+  if (log.log_type === 'cafe') {
+    body.cafe = {
+      cafe_name: log.cafe.cafe_name,
+      coffee_name: log.cafe.coffee_name,
+      tasting_tags: log.cafe.tasting_tags ?? [],
+    }
+  } else {
+    body.brew = {
+      bean_name: log.brew.bean_name,
+      brew_method: log.brew.brew_method,
+      brew_steps: log.brew.brew_steps ?? [],
+    }
+  }
+  return body
+}
+
 export default function LogDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const deleteMutation = useDeleteLog()
+  const createPresetMutation = useCreatePreset()
   const { data: log, error, isError, isLoading } = useLog(id ?? '')
   const brewSteps = log?.log_type === 'brew' ? log.brew.brew_steps ?? [] : []
+
+  const [showPresetInput, setShowPresetInput] = useState(false)
+  const [presetName, setPresetName] = useState('')
 
   async function handleDelete() {
     if (!id) {
@@ -66,6 +95,13 @@ export default function LogDetailPage() {
 
     await deleteMutation.mutateAsync(id)
     navigate('/')
+  }
+
+  async function handleSavePreset() {
+    if (!log || !presetName.trim()) return
+    await createPresetMutation.mutateAsync(buildPresetBody(log, presetName.trim()))
+    setShowPresetInput(false)
+    setPresetName('')
   }
 
   return (
@@ -81,13 +117,22 @@ export default function LogDetailPage() {
             목록으로
           </Link>
           {id && log ? (
-            <button
-              type="button"
-              onClick={() => navigate('/logs/new', { state: { cloneFrom: log } })}
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
-            >
-              복제
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => navigate('/logs/new', { state: { cloneFrom: log } })}
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
+              >
+                복제
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPresetInput(true)}
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
+              >
+                프리셋 저장
+              </button>
+            </>
           ) : null}
           {id ? (
             <Link
@@ -219,6 +264,43 @@ export default function LogDetailPage() {
               </div>
             </section>
           )}
+
+          {showPresetInput ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-[1.5rem] border border-amber-950/10 bg-stone-50/80 p-4">
+              <input
+                className="flex-1 rounded-full border border-amber-950/10 bg-white px-4 py-2 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-amber-900/35"
+                placeholder="프리셋 이름 (예: 출근길 아메리카노)"
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleSavePreset()
+                  if (e.key === 'Escape') setShowPresetInput(false)
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => void handleSavePreset()}
+                disabled={createPresetMutation.isPending || !presetName.trim()}
+                className="rounded-full bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {createPresetMutation.isPending ? '저장 중...' : '저장'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowPresetInput(false); setPresetName('') }}
+                className="rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-100"
+              >
+                취소
+              </button>
+              {createPresetMutation.isError ? (
+                <p className="w-full text-xs text-rose-600">{getErrorMessage(createPresetMutation.error)}</p>
+              ) : null}
+              {createPresetMutation.isSuccess ? (
+                <p className="w-full text-xs text-emerald-600">프리셋이 저장되었습니다.</p>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap justify-end gap-3 border-t border-amber-950/10 pt-4">
             <button

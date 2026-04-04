@@ -1,4 +1,5 @@
 import type { CoffeeLogFull, CreateLogInput } from '../types/log'
+import type { PresetFull } from '../types/preset'
 
 export type FormLogType = 'cafe' | 'brew'
 export type RoastLevelValue = 'light' | 'medium' | 'dark' | ''
@@ -222,6 +223,41 @@ export function cloneToFormState(log: CoffeeLogFull, now = new Date()): LogFormS
     state.cafe = { ...state.cafe, rating: '', impressions: '' }
   } else {
     state.brew = { ...state.brew, rating: '', impressions: '' }
+  }
+
+  return state
+}
+
+/**
+ * 프리셋을 새 로그 작성 폼의 초기값으로 변환한다.
+ * 프리셋의 log_type과 전용 필드를 채우고, 나머지(날짜, 평가 등)는 빈 값으로 초기화한다.
+ */
+export function presetToFormState(preset: PresetFull, now = new Date()): LogFormState {
+  const state = createEmptyFormState(now)
+  state.logType = preset.log_type
+
+  if (preset.log_type === 'cafe') {
+    state.cafe = {
+      ...state.cafe,
+      cafeName: preset.cafe.cafe_name,
+      coffeeName: preset.cafe.coffee_name,
+      tastingTags: preset.cafe.tasting_tags ?? [],
+    }
+  }
+
+  if (preset.log_type === 'brew') {
+    state.brew = {
+      ...state.brew,
+      beanName: preset.brew.bean_name,
+      brewMethod: preset.brew.brew_method as BrewMethodValue,
+      brewSteps:
+        preset.brew.brew_steps && preset.brew.brew_steps.length > 0
+          ? preset.brew.brew_steps
+          : [''],
+    }
+    if (preset.brew.recipe_detail) {
+      state.memo = preset.brew.recipe_detail
+    }
   }
 
   return state
