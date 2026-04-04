@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLogPayload, createEmptyFormState, logToFormState } from './logFormState'
+import { buildLogPayload, createEmptyFormState, hasOptionalValues, logToFormState } from './logFormState'
 import type { CoffeeLogFull } from '../types/log'
 
 describe('createEmptyFormState', () => {
@@ -109,5 +109,45 @@ describe('logToFormState', () => {
     expect(state.brew.tastingTags).toEqual(['베리', '홍차'])
     expect(state.brew.brewSteps).toEqual(['뜸 40초', '3회 나눠 붓기'])
     expect(state.brew.rating).toBe('4.5')
+  })
+})
+
+describe('hasOptionalValues', () => {
+  it('빈 폼 상태에서는 false를 반환한다', () => {
+    const state = createEmptyFormState()
+    expect(hasOptionalValues(state)).toBe(false)
+  })
+
+  it('cafe 선택 필드에 값이 있으면 true를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.cafe.tastingTags = ['초콜릿']
+    expect(hasOptionalValues(state)).toBe(true)
+  })
+
+  it('brew 선택 필드에 값이 있으면 true를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.logType = 'brew'
+    state.brew.coffeeAmountG = '18'
+    expect(hasOptionalValues(state)).toBe(true)
+  })
+
+  it('공통 선택 필드(companions)에 값이 있으면 true를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.companions = ['민수']
+    expect(hasOptionalValues(state)).toBe(true)
+  })
+
+  it('brew의 brewSteps가 빈 스텝만 있으면 false를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.logType = 'brew'
+    state.brew.brewSteps = ['', '  ']
+    expect(hasOptionalValues(state)).toBe(false)
+  })
+
+  it('brew의 brewSteps에 실제 내용이 있으면 true를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.logType = 'brew'
+    state.brew.brewSteps = ['뜸 30초']
+    expect(hasOptionalValues(state)).toBe(true)
   })
 })
