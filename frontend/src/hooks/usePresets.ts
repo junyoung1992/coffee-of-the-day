@@ -55,7 +55,6 @@ export function useUpdatePreset(id: string) {
   return useMutation({
     mutationFn: (body: UpdatePresetInput) => updatePreset(id, body),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: PRESET_KEYS.detail(id) })
       queryClient.invalidateQueries({ queryKey: PRESET_KEYS.all })
     },
   })

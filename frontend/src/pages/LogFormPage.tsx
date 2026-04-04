@@ -919,7 +919,7 @@ export default function LogFormPage() {
             disabled={isEditMode || isCloneMode}
             error={fieldErrors['log_type']}
           />
-          {!isEditMode ? (
+          {!isEditMode && !isCloneMode ? (
             <PresetSection
               logType={form.logType}
               onSelect={(preset) => {

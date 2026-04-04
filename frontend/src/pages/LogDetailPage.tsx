@@ -68,6 +68,7 @@ function buildPresetBody(log: CoffeeLogFull, name: string): CreatePresetInput {
     body.brew = {
       bean_name: log.brew.bean_name,
       brew_method: log.brew.brew_method,
+      recipe_detail: log.memo ?? undefined,
       brew_steps: log.brew.brew_steps ?? [],
     }
   }
@@ -127,7 +128,7 @@ export default function LogDetailPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowPresetInput(true)}
+                onClick={() => { createPresetMutation.reset(); setShowPresetInput(true) }}
                 className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
               >
                 프리셋 저장

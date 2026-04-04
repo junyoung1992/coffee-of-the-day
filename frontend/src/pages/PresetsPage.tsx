@@ -61,6 +61,7 @@ function EditModal({
       body.brew = {
         bean_name: preset.brew.bean_name,
         brew_method: preset.brew.brew_method,
+        recipe_detail: preset.brew.recipe_detail ?? undefined,
         brew_steps: preset.brew.brew_steps ?? [],
       }
     }
@@ -181,6 +182,10 @@ function PresetCard({
           </button>
         </div>
       </div>
+
+      {deleteMutation.isError ? (
+        <p className="mt-2 text-xs text-rose-600">{getErrorMessage(deleteMutation.error)}</p>
+      ) : null}
     </div>
   )
 }
