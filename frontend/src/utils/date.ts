@@ -7,10 +7,11 @@ export function formatLocalDate(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
-// 당월 1일 (로컬 시간 기준)
+// 오늘 기준 30일 전 (로컬 시간 기준)
 export function getDefaultDateFrom(): string {
   const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  now.setDate(now.getDate() - 30)
+  return formatLocalDate(now)
 }
 
 // 오늘 (로컬 시간 기준)

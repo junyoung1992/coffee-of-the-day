@@ -18,16 +18,16 @@ describe('formatLocalDate', () => {
 })
 
 describe('getDefaultDateFrom', () => {
-  it('당월 1일을 반환한다', () => {
+  it('오늘 기준 30일 전을 반환한다', () => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 2, 30, 3, 0)) // 3월 30일 03:00 KST
-    expect(getDefaultDateFrom()).toBe('2026-03-01')
+    vi.setSystemTime(new Date(2026, 3, 4)) // 4월 4일
+    expect(getDefaultDateFrom()).toBe('2026-03-05')
   })
 
-  it('12월에도 올바르게 동작한다', () => {
+  it('연도를 넘어가는 경우에도 올바르게 동작한다', () => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date(2026, 11, 25)) // 12월 25일
-    expect(getDefaultDateFrom()).toBe('2026-12-01')
+    vi.setSystemTime(new Date(2026, 0, 15)) // 1월 15일
+    expect(getDefaultDateFrom()).toBe('2025-12-16')
   })
 })
 

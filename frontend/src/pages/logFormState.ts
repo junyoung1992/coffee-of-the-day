@@ -281,3 +281,45 @@ export function buildLogPayload(state: LogFormState): CreateLogInput {
 
   return payload
 }
+
+/**
+ * 선택 영역 필드에 값이 하나라도 있는지 검사한다.
+ * 수정 모드 진입 시 토글 자동 펼침 여부를 결정하는 데 사용한다.
+ */
+export function hasOptionalValues(state: LogFormState): boolean {
+  // 공통 선택 필드
+  if (state.companions.length > 0 || state.memo.trim() !== '') {
+    return true
+  }
+
+  if (state.logType === 'cafe') {
+    const c = state.cafe
+    return (
+      c.location.trim() !== '' ||
+      c.beanOrigin.trim() !== '' ||
+      c.beanProcess.trim() !== '' ||
+      c.roastLevel !== '' ||
+      c.tastingTags.length > 0 ||
+      c.tastingNote.trim() !== '' ||
+      c.impressions.trim() !== ''
+    )
+  }
+
+  const b = state.brew
+  return (
+    b.beanOrigin.trim() !== '' ||
+    b.beanProcess.trim() !== '' ||
+    b.roastLevel !== '' ||
+    b.roastDate.trim() !== '' ||
+    b.brewDevice.trim() !== '' ||
+    b.coffeeAmountG.trim() !== '' ||
+    b.waterAmountMl.trim() !== '' ||
+    b.waterTempC.trim() !== '' ||
+    b.brewTimeSec.trim() !== '' ||
+    b.grindSize.trim() !== '' ||
+    b.tastingTags.length > 0 ||
+    b.tastingNote.trim() !== '' ||
+    b.brewSteps.some((step) => step.trim() !== '') ||
+    b.impressions.trim() !== ''
+  )
+}
