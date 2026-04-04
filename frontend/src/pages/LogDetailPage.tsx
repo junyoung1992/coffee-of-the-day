@@ -86,7 +86,7 @@ export default function LogDetailPage() {
               onClick={() => navigate('/logs/new', { state: { cloneFrom: log } })}
               className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
             >
-              다시 쓰기
+              복제
             </button>
           ) : null}
           {id ? (
