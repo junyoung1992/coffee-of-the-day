@@ -16,6 +16,8 @@ tags:
     description: 회원가입 / 로그인 / 토큰 관리
   - name: logs
     description: 커피 기록 관리
+  - name: presets
+    description: 즐겨찾기 프리셋 관리
   - name: suggestions
     description: 자동완성 제안
 
@@ -223,6 +225,111 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/presets:
+    post:
+      summary: 프리셋 생성
+      tags: [presets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePresetRequest'
+      responses:
+        '201':
+          description: 생성 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      summary: 프리셋 목록 조회 (최근 사용순)
+      tags: [presets]
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPresetsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/presets/{id}:
+    get:
+      summary: 프리셋 단건 조회
+      tags: [presets]
+      parameters:
+        - $ref: '#/components/parameters/PresetId'
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresetResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: 프리셋 수정
+      tags: [presets]
+      parameters:
+        - $ref: '#/components/parameters/PresetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePresetRequest'
+      responses:
+        '200':
+          description: 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresetResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: 프리셋 삭제
+      tags: [presets]
+      parameters:
+        - $ref: '#/components/parameters/PresetId'
+      responses:
+        '204':
+          description: 삭제 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/presets/{id}/use:
+    post:
+      summary: 프리셋 사용 기록 (last_used_at 갱신)
+      tags: [presets]
+      parameters:
+        - $ref: '#/components/parameters/PresetId'
+      responses:
+        '204':
+          description: 사용 기록 성공
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/suggestions/tags:
     get:
       summary: 테이스팅 태그 자동완성 제안
@@ -279,6 +386,13 @@ components:
       schema:
         type: string
       description: 커피 기록 ID
+    PresetId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 프리셋 ID
 
   responses:
     BadRequest:
@@ -573,6 +687,105 @@ components:
           items:
             type: string
           description: 빈도순 정렬된 자동완성 제안 목록
+
+    CafePresetDetail:
+      type: object
+      required: [cafe_name, coffee_name]
+      properties:
+        cafe_name:
+          type: string
+          example: 블루보틀 성수
+        coffee_name:
+          type: string
+          example: 싱글 오리진
+        tasting_tags:
+          type: array
+          items:
+            type: string
+          example: [초콜릿, 체리]
+
+    BrewPresetDetail:
+      type: object
+      required: [bean_name, brew_method]
+      properties:
+        bean_name:
+          type: string
+          example: 에티오피아 예가체프
+        brew_method:
+          $ref: '#/components/schemas/BrewMethod'
+        recipe_detail:
+          type: string
+          nullable: true
+        brew_steps:
+          type: array
+          items:
+            type: string
+
+    PresetResponse:
+      type: object
+      required: [id, user_id, name, log_type, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+          example: ���근길 아메리카노
+        log_type:
+          $ref: '#/components/schemas/LogType'
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        cafe:
+          $ref: '#/components/schemas/CafePresetDetail'
+        brew:
+          $ref: '#/components/schemas/BrewPresetDetail'
+
+    CreatePresetRequest:
+      type: object
+      required: [name, log_type]
+      properties:
+        name:
+          type: string
+          example: 출근길 아메리카노
+        log_type:
+          $ref: '#/components/schemas/LogType'
+        cafe:
+          $ref: '#/components/schemas/CafePresetDetail'
+          nullable: true
+        brew:
+          $ref: '#/components/schemas/BrewPresetDetail'
+          nullable: true
+
+    UpdatePresetRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        cafe:
+          $ref: '#/components/schemas/CafePresetDetail'
+          nullable: true
+        brew:
+          $ref: '#/components/schemas/BrewPresetDetail'
+          nullable: true
+
+    ListPresetsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PresetResponse'
 
     ErrorResponse:
       type: object

@@ -112,7 +112,7 @@
 
 ## 6. OpenAPI 스펙 업데이트
 
-- [ ] **프리셋 스키마 및 엔드포인트 추가**
+- [x] **프리셋 스키마 및 엔드포인트 추가**
   - Target: `docs/openapi.yml`
   - tags에 `presets` 추가
   - schemas: `CafePresetDetail`, `BrewPresetDetail`, `PresetResponse`, `CreatePresetRequest`, `UpdatePresetRequest`, `ListPresetsResponse`
@@ -126,7 +126,7 @@
 
 의존: Task 6 완료 후.
 
-- [ ] **타입 생성 및 파생 타입 정의**
+- [x] **타입 생성 및 파생 타입 정의**
   - `npm run generate` 실행하여 `src/types/schema.ts` 갱신
   - Target: `frontend/src/types/preset.ts` (신규)
   - `schema.ts`에서 생성된 타입 기반으로 discriminated union 정의
@@ -139,12 +139,12 @@
 
 의존: Task 7 완료 후.
 
-- [ ] **API 함수 작성**
+- [x] **API 함수 작성**
   - Target: `frontend/src/api/presets.ts` (신규)
   - `getPresets()`, `getPreset(id)`, `createPreset(body)`, `updatePreset(id, body)`, `deletePreset(id)`, `usePreset(id)` 함수
   - 기존 `api/logs.ts` 패턴 참조
 
-- [ ] **커스텀 hooks 작성**
+- [x] **커스텀 hooks 작성**
   - Target: `frontend/src/hooks/usePresets.ts` (신규)
   - `PRESET_KEYS` 쿼리 키 상수 정의
   - `usePresetList()`: useQuery로 전체 목록 조회
@@ -154,7 +154,7 @@
   - `useDeletePreset()`: useMutation, 성공 시 목록 무효화
   - `useUsePreset()`: useMutation, 성공 시 목록 캐시에서 해당 프리셋의 last_used_at을 optimistic update
 
-- [ ] **Hooks 테스트 작성**
+- [x] **Hooks 테스트 작성**
   - Target: `frontend/src/hooks/usePresets.test.tsx` (신규)
   - 기존 `hooks/useLogs.test.tsx` 패턴 참조
   - 목록 조회, 생성/수정/삭제 mutation 후 캐시 무효화 확인

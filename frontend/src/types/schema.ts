@@ -365,6 +365,202 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 프리셋 목록 조회 (최근 사용순) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 조회 성공 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ListPresetsResponse"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        put?: never;
+        /** 프리셋 생성 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreatePresetRequest"];
+                };
+            };
+            responses: {
+                /** @description 생성 성공 */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PresetResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/presets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 프리셋 단건 조회 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 프리셋 ID */
+                    id: components["parameters"]["PresetId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 조회 성공 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PresetResponse"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        /** 프리셋 수정 */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 프리셋 ID */
+                    id: components["parameters"]["PresetId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePresetRequest"];
+                };
+            };
+            responses: {
+                /** @description 수정 성공 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PresetResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        post?: never;
+        /** 프리셋 삭제 */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 프리셋 ID */
+                    id: components["parameters"]["PresetId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 삭제 성공 */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/presets/{id}/use": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 프리셋 사용 기록 (last_used_at 갱신) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description 프리셋 ID */
+                    id: components["parameters"]["PresetId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 사용 기록 성공 */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/suggestions/tags": {
         parameters: {
             query?: never;
@@ -581,6 +777,56 @@ export interface components {
             /** @description 빈도순 정렬된 자동완성 제안 목록 */
             suggestions: string[];
         };
+        CafePresetDetail: {
+            /** @example 블루보틀 성수 */
+            cafe_name: string;
+            /** @example 싱글 오리진 */
+            coffee_name: string;
+            /**
+             * @example [
+             *       "초콜릿",
+             *       "체리"
+             *     ]
+             */
+            tasting_tags?: string[];
+        };
+        BrewPresetDetail: {
+            /** @example 에티오피아 예가체프 */
+            bean_name: string;
+            brew_method: components["schemas"]["BrewMethod"];
+            recipe_detail?: string | null;
+            brew_steps?: string[];
+        };
+        PresetResponse: {
+            id: string;
+            user_id: string;
+            /** @example ���근길 아메리카노 */
+            name: string;
+            log_type: components["schemas"]["LogType"];
+            /** Format: date-time */
+            last_used_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            cafe?: components["schemas"]["CafePresetDetail"];
+            brew?: components["schemas"]["BrewPresetDetail"];
+        };
+        CreatePresetRequest: {
+            /** @example 출근길 아메리카노 */
+            name: string;
+            log_type: components["schemas"]["LogType"];
+            cafe?: components["schemas"]["CafePresetDetail"];
+            brew?: components["schemas"]["BrewPresetDetail"];
+        };
+        UpdatePresetRequest: {
+            name: string;
+            cafe?: components["schemas"]["CafePresetDetail"];
+            brew?: components["schemas"]["BrewPresetDetail"];
+        };
+        ListPresetsResponse: {
+            items: components["schemas"]["PresetResponse"][];
+        };
         ErrorResponse: {
             /** @example 이메일 또는 비밀번호가 올바르지 않습니다 */
             error?: string;
@@ -632,6 +878,8 @@ export interface components {
     parameters: {
         /** @description 커피 기록 ID */
         LogId: string;
+        /** @description 프리셋 ID */
+        PresetId: string;
     };
     requestBodies: never;
     headers: never;
