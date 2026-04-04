@@ -99,7 +99,7 @@ test('clone from detail page creates a new log with pre-filled data', async ({ p
   await expect(page).toHaveURL(/\/logs\/.+$/)
   await expect(page.getByRole('heading', { name: originalBean })).toBeVisible()
 
-  // 2. 상세 화면에서 "다시 쓰기" 클릭
+  // 2. 상세 화면에서 "복제" 클릭
   await page.getByRole('button', { name: '복제' }).click()
   await expect(page).toHaveURL('/logs/new')
 

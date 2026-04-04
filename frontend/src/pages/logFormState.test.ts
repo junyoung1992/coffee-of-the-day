@@ -193,6 +193,12 @@ describe('cloneToFormState', () => {
     expect(state.cafe.tastingNote).toBe('깔끔한 산미')
   })
 
+  it('brew 로그 복제 시 tastingNote가 유지된다', () => {
+    const state = cloneToFormState(brewLog, cloneNow)
+
+    expect(state.brew.tastingNote).toBe('달콤한 뒷맛')
+  })
+
   it('brew 로그 복제 시 리셋 대상 필드가 초기화된다', () => {
     const state = cloneToFormState(brewLog, cloneNow)
 
@@ -247,6 +253,18 @@ describe('hasOptionalValues', () => {
   it('공통 선택 필드(companions)에 값이 있으면 true를 반환한다', () => {
     const state = createEmptyFormState()
     state.companions = ['민수']
+    expect(hasOptionalValues(state)).toBe(true)
+  })
+
+  it('공통 선택 필드(memo)에 값이 있으면 true를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.memo = '오늘 커피가 특히 맛있었다'
+    expect(hasOptionalValues(state)).toBe(true)
+  })
+
+  it('cafe의 impressions에 값이 있으면 true를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.cafe.impressions = '다음에 또 가고 싶다'
     expect(hasOptionalValues(state)).toBe(true)
   })
 

@@ -133,4 +133,22 @@ describe('LogFormPage clone 모드', () => {
     const cafeButton = screen.getByRole('button', { name: /Cafe log/ })
     expect(cafeButton).toBeDisabled()
   })
+
+  it('cafe 로그 복제 시 rating이 리셋되어 선택된 값이 없다', () => {
+    renderCloneMode(cafeLog)
+
+    // RatingInput의 각 점수 버튼은 aria-pressed로 선택 상태를 표시한다
+    const pressedButtons = screen.queryAllByRole('button', { pressed: true })
+    // rating 버튼 중 눌린 것이 없어야 한다 (점수 형식 "N.N"에 해당하는 버튼)
+    const ratingPressed = pressedButtons.filter((btn) => /^\d\.\d$/.test(btn.textContent ?? ''))
+    expect(ratingPressed).toHaveLength(0)
+  })
+
+  it('brew 로그 복제 시 rating이 리셋되어 선택된 값이 없다', () => {
+    renderCloneMode(brewLog)
+
+    const pressedButtons = screen.queryAllByRole('button', { pressed: true })
+    const ratingPressed = pressedButtons.filter((btn) => /^\d\.\d$/.test(btn.textContent ?? ''))
+    expect(ratingPressed).toHaveLength(0)
+  })
 })

@@ -219,11 +219,9 @@ export function cloneToFormState(log: CoffeeLogFull, now = new Date()): LogFormS
   state.memo = ''
 
   if (state.logType === 'cafe') {
-    state.cafe.rating = ''
-    state.cafe.impressions = ''
+    state.cafe = { ...state.cafe, rating: '', impressions: '' }
   } else {
-    state.brew.rating = ''
-    state.brew.impressions = ''
+    state.brew = { ...state.brew, rating: '', impressions: '' }
   }
 
   return state

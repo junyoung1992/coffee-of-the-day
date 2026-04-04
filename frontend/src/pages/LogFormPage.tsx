@@ -107,16 +107,16 @@ type FieldErrors = Record<string, string>
 function LogTypeSection({
   form,
   setForm,
-  isEditMode,
+  disabled,
   error,
 }: {
   form: LogFormState
   setForm: React.Dispatch<React.SetStateAction<LogFormState>>
-  isEditMode: boolean
+  disabled: boolean
   error?: string
 }) {
   function handleLogTypeChange(logType: FormLogType) {
-    if (isEditMode) return
+    if (disabled) return
     setForm((prev) => ({ ...prev, logType }))
   }
 
@@ -124,7 +124,7 @@ function LogTypeSection({
     <Section
       title="로그 유형"
       description={
-        isEditMode
+        disabled
           ? '기존 로그 타입은 백엔드 제약에 따라 변경할 수 없습니다.'
           : '바리스타가 만들어준 커피는 cafe, 내가 직접 추출한 커피는 brew로 기록합니다.'
       }
@@ -138,13 +138,13 @@ function LogTypeSection({
               key={type}
               type="button"
               onClick={() => handleLogTypeChange(type)}
-              disabled={isEditMode}
+              disabled={disabled}
               className={[
                 'rounded-[1.5rem] border p-5 text-left transition',
                 selected
                   ? 'border-amber-900 bg-amber-900 !text-white shadow-[0_16px_40px_rgba(123,79,34,0.22)]'
                   : 'border-amber-950/10 bg-white text-stone-800 hover:border-amber-900/25 hover:bg-amber-50/60',
-                isEditMode ? 'cursor-not-allowed opacity-70' : '',
+                disabled ? 'cursor-not-allowed opacity-70' : '',
               ].join(' ')}
             >
               <p className="text-base font-semibold">{type === 'cafe' ? 'Cafe log' : 'Brew log'}</p>
@@ -213,6 +213,7 @@ function ToggleButton({
     <button
       type="button"
       onClick={onToggle}
+      aria-expanded={expanded}
       className="w-full rounded-full border border-amber-950/10 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-amber-900/25 hover:bg-amber-50/60"
     >
       {expanded ? '접기' : '더 기록하기'}
@@ -865,7 +866,7 @@ export default function LogFormPage() {
           <LogTypeSection
             form={form}
             setForm={setForm}
-            isEditMode={isEditMode || isCloneMode}
+            disabled={isEditMode || isCloneMode}
             error={fieldErrors['log_type']}
           />
           {form.logType === 'cafe' ? (
