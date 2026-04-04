@@ -6,7 +6,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RatingInput } from '../components/RatingInput'
 import { TagInput } from '../components/TagInput'
@@ -16,6 +16,7 @@ import { useCompanionSuggestions, useTagSuggestions } from '../hooks/useSuggesti
 import {
   brewMethodOptions,
   buildLogPayload,
+  cloneToFormState,
   createEmptyFormState,
   hasOptionalValues,
   logToFormState,
@@ -23,6 +24,7 @@ import {
   type FormLogType,
   type LogFormState,
 } from './logFormState'
+import type { CoffeeLogFull } from '../types/log'
 
 // --- 공통 UI 유틸 ---
 
@@ -755,8 +757,11 @@ function getErrorMessage(error: unknown) {
 
 export default function LogFormPage() {
   const { id } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
+  const cloneFrom = (location.state as { cloneFrom?: CoffeeLogFull } | null)?.cloneFrom
   const isEditMode = Boolean(id)
+  const isCloneMode = !isEditMode && cloneFrom != null
   const [form, setForm] = useState(() => createEmptyFormState())
   const [expanded, setExpanded] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -786,6 +791,19 @@ export default function LogFormPage() {
     hydratedLogIDRef.current = log.id
   }, [isEditMode, log])
 
+  // clone 모드: 전달받은 로그 데이터로 폼 초기화
+  useEffect(() => {
+    if (!isCloneMode || hydratedLogIDRef.current === 'clone') {
+      return
+    }
+    const formState = cloneToFormState(cloneFrom)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm(formState)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setExpanded(hasOptionalValues(formState))
+    hydratedLogIDRef.current = 'clone'
+  }, [isCloneMode, cloneFrom])
+
   const activeMutation = isEditMode ? updateMutation : createMutation
   const toggleExpanded = () => setExpanded((prev) => !prev)
 
@@ -809,8 +827,8 @@ export default function LogFormPage() {
 
   return (
     <Layout
-      title={isEditMode ? '기록 수정' : '커피 기록 추가'}
-      description="필수 정보만 빠르게 기록하고, 더 기록하기를 눌러 상세 정보를 추가할 수 있습니다."
+      title={isEditMode ? '기록 수정' : isCloneMode ? '기록 복제' : '커피 기록 추가'}
+      description={isCloneMode ? '이전 기록을 바탕으로 새 기록을 작성합니다. 날짜와 평가는 초기화됩니다.' : '필수 정보만 빠르게 기록하고, 더 기록하기를 눌러 상세 정보를 추가할 수 있습니다.'}
       actions={
         <>
           <Link
@@ -847,7 +865,7 @@ export default function LogFormPage() {
           <LogTypeSection
             form={form}
             setForm={setForm}
-            isEditMode={isEditMode}
+            isEditMode={isEditMode || isCloneMode}
             error={fieldErrors['log_type']}
           />
           {form.logType === 'cafe' ? (
