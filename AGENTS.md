@@ -53,9 +53,10 @@ docs/
 - Before creating a PR, finalize documentation:
   - Update `docs/arch/` if architecture or key design decisions changed.
   - Review `docs/spec.md` to ensure it reflects the current application state.
+  - Remove completed items from `docs/backlog.md`. Completed history is tracked in git, not in the backlog.
 - Follow the Conventional Commits specification. Always include a description body, not just the subject line. Commit messages must be written in English.
 - Do not create commits automatically. Commit only after review is completed and the user explicitly requests it.
-- PRs are **squash-merged** into main. After merge, delete the feature branch (both remote and local).
+- PRs are **squash-merged** into main. Squash merge commit messages must also be written in English and follow Conventional Commits. After merge, delete the feature branch (both remote and local).
 
 ### Backend
 

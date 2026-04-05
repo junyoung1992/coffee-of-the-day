@@ -55,12 +55,57 @@ func TestGetTagSuggestions_Success(t *testing.T) {
 	assert.Equal(t, []string{"초콜릿", "초록사과"}, resp.Suggestions)
 }
 
-func TestGetTagSuggestions_EmptyQ_ReturnsAll(t *testing.T) {
+func TestGetTagSuggestions_EmptyQ_ReturnsEmptyArray(t *testing.T) {
 	svc := &stubSuggestionService{
-		tagsFunc: func(_ context.Context, _, q string) ([]string, error) {
-			// 빈 q도 서비스로 그대로 전달되어야 한다.
-			assert.Equal(t, "", q)
-			return []string{"초콜릿", "체리", "플로럴"}, nil
+		tagsFunc: func(_ context.Context, _, _ string) ([]string, error) {
+			t.Fatal("빈 q일 때 서비스가 호출되면 안 된다")
+			return nil, nil
+		},
+	}
+	h := NewSuggestionHandler(svc)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/suggestions/tags?q=", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.GetTagSuggestions(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp suggestionsResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.NotNil(t, resp.Suggestions)
+	assert.Empty(t, resp.Suggestions)
+}
+
+func TestGetTagSuggestions_WhitespaceOnlyQ_ReturnsEmptyArray(t *testing.T) {
+	svc := &stubSuggestionService{
+		tagsFunc: func(_ context.Context, _, _ string) ([]string, error) {
+			t.Fatal("공백만 있는 q일 때 서비스가 호출되면 안 된다")
+			return nil, nil
+		},
+	}
+	h := NewSuggestionHandler(svc)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/suggestions/tags?q=%20%20", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.GetTagSuggestions(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp suggestionsResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.NotNil(t, resp.Suggestions)
+	assert.Empty(t, resp.Suggestions)
+}
+
+func TestGetTagSuggestions_MissingQ_ReturnsEmptyArray(t *testing.T) {
+	svc := &stubSuggestionService{
+		tagsFunc: func(_ context.Context, _, _ string) ([]string, error) {
+			t.Fatal("q 파라미터 누락 시 서비스가 호출되면 안 된다")
+			return nil, nil
 		},
 	}
 	h := NewSuggestionHandler(svc)
@@ -75,7 +120,8 @@ func TestGetTagSuggestions_EmptyQ_ReturnsAll(t *testing.T) {
 
 	var resp suggestionsResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-	assert.Len(t, resp.Suggestions, 3)
+	assert.NotNil(t, resp.Suggestions)
+	assert.Empty(t, resp.Suggestions)
 }
 
 func TestGetTagSuggestions_NoResults_ReturnsEmptyArray(t *testing.T) {
@@ -165,6 +211,75 @@ func TestGetCompanionSuggestions_Success(t *testing.T) {
 	var resp suggestionsResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, []string{"지수", "지훈"}, resp.Suggestions)
+}
+
+func TestGetCompanionSuggestions_WhitespaceOnlyQ_ReturnsEmptyArray(t *testing.T) {
+	svc := &stubSuggestionService{
+		companionsFunc: func(_ context.Context, _, _ string) ([]string, error) {
+			t.Fatal("공백만 있는 q일 때 서비스가 호출되면 안 된다")
+			return nil, nil
+		},
+	}
+	h := NewSuggestionHandler(svc)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/suggestions/companions?q=%20%20", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.GetCompanionSuggestions(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp suggestionsResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.NotNil(t, resp.Suggestions)
+	assert.Empty(t, resp.Suggestions)
+}
+
+func TestGetCompanionSuggestions_EmptyQ_ReturnsEmptyArray(t *testing.T) {
+	svc := &stubSuggestionService{
+		companionsFunc: func(_ context.Context, _, _ string) ([]string, error) {
+			t.Fatal("빈 q일 때 서비스가 호출되면 안 된다")
+			return nil, nil
+		},
+	}
+	h := NewSuggestionHandler(svc)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/suggestions/companions?q=", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.GetCompanionSuggestions(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp suggestionsResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.NotNil(t, resp.Suggestions)
+	assert.Empty(t, resp.Suggestions)
+}
+
+func TestGetCompanionSuggestions_MissingQ_ReturnsEmptyArray(t *testing.T) {
+	svc := &stubSuggestionService{
+		companionsFunc: func(_ context.Context, _, _ string) ([]string, error) {
+			t.Fatal("q 파라미터 누락 시 서비스가 호출되면 안 된다")
+			return nil, nil
+		},
+	}
+	h := NewSuggestionHandler(svc)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/suggestions/companions", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.GetCompanionSuggestions(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp suggestionsResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.NotNil(t, resp.Suggestions)
+	assert.Empty(t, resp.Suggestions)
 }
 
 func TestGetCompanionSuggestions_ValidationError_ReturnsBadRequest(t *testing.T) {

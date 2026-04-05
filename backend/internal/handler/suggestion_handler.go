@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"coffee-of-the-day/backend/internal/service"
 )
@@ -26,6 +27,12 @@ func (h *SuggestionHandler) GetTagSuggestions(w http.ResponseWriter, r *http.Req
 	userID := getUserID(r)
 	q := r.URL.Query().Get("q")
 
+	// 빈 입력 또는 공백만 있는 경우 서비스 호출 없이 빈 배열 반환
+	if len(strings.TrimSpace(q)) < 1 {
+		writeJSON(w, http.StatusOK, suggestionsResponse{Suggestions: []string{}})
+		return
+	}
+
 	suggestions, err := h.svc.GetTagSuggestions(r.Context(), userID, q)
 	if err != nil {
 		writeSuggestionServiceError(w, err)
@@ -39,6 +46,12 @@ func (h *SuggestionHandler) GetTagSuggestions(w http.ResponseWriter, r *http.Req
 func (h *SuggestionHandler) GetCompanionSuggestions(w http.ResponseWriter, r *http.Request) {
 	userID := getUserID(r)
 	q := r.URL.Query().Get("q")
+
+	// 빈 입력 또는 공백만 있는 경우 서비스 호출 없이 빈 배열 반환
+	if len(strings.TrimSpace(q)) < 1 {
+		writeJSON(w, http.StatusOK, suggestionsResponse{Suggestions: []string{}})
+		return
+	}
 
 	suggestions, err := h.svc.GetCompanionSuggestions(r.Context(), userID, q)
 	if err != nil {
