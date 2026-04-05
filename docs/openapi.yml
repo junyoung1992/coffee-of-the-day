@@ -339,7 +339,8 @@ paths:
           in: query
           schema:
             type: string
-          description: 검색어 (빈 문자열이면 전체 반환)
+            minLength: 1
+          description: 검색어 (최소 1자 이상, 빈 문자열이면 빈 배열 반환)
       responses:
         '200':
           description: 제안 목록
@@ -359,7 +360,8 @@ paths:
           in: query
           schema:
             type: string
-          description: 검색어 (빈 문자열이면 전체 반환)
+            minLength: 1
+          description: 검색어 (최소 1자 이상, 빈 문자열이면 빈 배열 반환)
       responses:
         '200':
           description: 제안 목록
