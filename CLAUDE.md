@@ -9,4 +9,4 @@
 ## Workflow Rules
 
 - When starting work on a GitHub issue or when the user provides requirements that need spec analysis and development planning, always spawn the **planner agent** first before any implementation work.
-- Code review must be performed by the **code-review agent** (`.claude/agents/code-review.md`). The agent reads the diff, analyzes code, and writes a review document to the issue's `review/` directory.
+- Code review must be performed by the **code-review agent**. The agent reads the diff, analyzes code, and writes a review document to the issue's `review/` directory.
