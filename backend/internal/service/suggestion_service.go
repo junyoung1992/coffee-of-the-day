@@ -60,7 +60,7 @@ func (s *DefaultSuggestionService) GetCompanionSuggestions(ctx context.Context, 
 	return suggestions, nil
 }
 
-// normalizeQ는 검색어를 정규화한다. 빈 문자열은 전체 조회를 의미한다.
+// normalizeQ는 검색어를 정규화한다. handler에서 빈 입력을 사전 차단하므로 빈 문자열은 도달하지 않는다.
 func normalizeQ(q string) (string, error) {
 	trimmed := strings.TrimSpace(q)
 	if len(trimmed) > 100 {
