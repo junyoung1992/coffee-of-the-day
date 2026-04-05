@@ -8,7 +8,7 @@
 
 ## 1. recipeToFormState 함수 추가
 
-- [ ] **`recipeToFormState()` 함수 구현**
+- [x] **`recipeToFormState()` 함수 구현**
   - Target: `frontend/src/pages/logFormState.ts`
   - `cloneToFormState()` 아래(line 229 부근)에 `recipeToFormState(log: BrewLogFull, now?: Date): LogFormState` 함수를 추가한다.
   - import에 `BrewLogFull`을 추가한다 (현재 `CoffeeLogFull`만 import됨, `types/log.ts`에서 가져온다).
@@ -38,7 +38,7 @@
 
 ## 2. recipeToFormState 단위 테스트
 
-- [ ] **테스트 케이스 추가**
+- [x] **테스트 케이스 추가**
   - Target: `frontend/src/pages/logFormState.test.ts`
   - 기존 `cloneToFormState` describe 블록 패턴을 참고하여 `recipeToFormState` describe 블록을 추가한다.
   - import에 `recipeToFormState`를 추가한다.
@@ -55,7 +55,7 @@
 
 ## 3. RecipePickerModal 컴포넌트 구현
 
-- [ ] **RecipePickerModal 컴포넌트 추가**
+- [x] **RecipePickerModal 컴포넌트 추가**
   - Target: `frontend/src/pages/LogFormPage.tsx`
   - `PresetSection` 컴포넌트 아래(line 212 부근)에 추가한다.
   - Props: `{ open: boolean; onClose: () => void; onSelect: (log: BrewLogFull) => void }`
@@ -81,7 +81,7 @@
 
 ## 4. RecipePickerSection 및 LogFormPage 통합
 
-- [ ] **RecipePickerSection 컴포넌트 추가**
+- [x] **RecipePickerSection 컴포넌트 추가**
   - Target: `frontend/src/pages/LogFormPage.tsx`
   - `RecipePickerModal` 아래에 추가한다.
   - Props: `{ onSelect: (log: BrewLogFull) => void }`
@@ -91,7 +91,7 @@
     3. 버튼 클릭 시 모달 open
     4. 모달에서 로그 선택 시 `onSelect` 호출 + 모달 닫기
 
-- [ ] **LogFormPage에 RecipePickerSection 배치**
+- [x] **LogFormPage에 RecipePickerSection 배치**
   - Target: `frontend/src/pages/LogFormPage.tsx`
   - `LogFormPage` 메인 컴포넌트의 JSX에서 `PresetSection` 아래에 조건부 렌더링 추가
   - 조건: `!isEditMode && !isCloneMode && form.logType === 'brew'`
@@ -112,7 +112,7 @@
 
 ## 5. spec.md 업데이트
 
-- [ ] **spec.md에 레시피 불러오기 섹션 추가**
+- [x] **spec.md에 레시피 불러오기 섹션 추가**
   - Target: `docs/spec.md`
   - 6.3 로그 복제 아래에 "6.4 브루 레시피 불러오기" 섹션을 추가한다.
   - 내용:
@@ -128,11 +128,11 @@
 
 ## 6. 검증
 
-- [ ] **단위 테스트 실행**
+- [x] **단위 테스트 실행**
   - Command: `cd frontend && npm test`
   - `logFormState.test.ts`의 `recipeToFormState` 테스트가 모두 통과하는지 확인
 
-- [ ] **기존 테스트 회귀 확인**
+- [x] **기존 테스트 회귀 확인**
   - Command: `cd frontend && npm test`
   - `LogFormPage.test.tsx`의 기존 테스트가 깨지지 않는지 확인
 

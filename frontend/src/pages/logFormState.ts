@@ -1,4 +1,4 @@
-import type { CoffeeLogFull, CreateLogInput } from '../types/log'
+import type { BrewLogFull, CoffeeLogFull, CreateLogInput } from '../types/log'
 import type { PresetFull } from '../types/preset'
 
 export type FormLogType = 'cafe' | 'brew'
@@ -229,7 +229,37 @@ export function cloneToFormState(log: CoffeeLogFull, now = new Date()): LogFormS
 }
 
 /**
- * 프리셋을 새 로그 작성 폼의 초기값으로 변환한다.
+ * 이전 brew 로그에서 레시피 필드만 추출하여 새 로그 작성 폼의 초기��으로 변환한다.
+ * cloneToFormState()가 전체 복제 후 일부 리셋(subtractive)하는 것과 달리,
+ * 빈 폼에서 시작하여 레시피 필드만 채우는(additive) 방식이다.
+ */
+export function recipeToFormState(log: BrewLogFull, now = new Date()): LogFormState {
+  const state = createEmptyFormState(now)
+  state.logType = 'brew'
+
+  state.brew = {
+    ...state.brew,
+    beanName: log.brew.bean_name,
+    beanOrigin: log.brew.bean_origin ?? '',
+    beanProcess: log.brew.bean_process ?? '',
+    roastLevel: (log.brew.roast_level ?? '') as RoastLevelValue,
+    roastDate: log.brew.roast_date ?? '',
+    brewMethod: log.brew.brew_method as BrewMethodValue,
+    brewDevice: log.brew.brew_device ?? '',
+    coffeeAmountG: log.brew.coffee_amount_g ? String(log.brew.coffee_amount_g) : '',
+    waterAmountMl: log.brew.water_amount_ml ? String(log.brew.water_amount_ml) : '',
+    waterTempC: log.brew.water_temp_c ? String(log.brew.water_temp_c) : '',
+    brewTimeSec: log.brew.brew_time_sec ? String(log.brew.brew_time_sec) : '',
+    grindSize: log.brew.grind_size ?? '',
+    brewSteps:
+      log.brew.brew_steps && log.brew.brew_steps.length > 0 ? log.brew.brew_steps : [''],
+  }
+
+  return state
+}
+
+/**
+ * 프리셋을 새 로그 작성 폼의 초기값으로 변���한다.
  * 프리셋의 log_type과 전용 필드를 채우고, 나머지(날짜, 평가 등)는 빈 값으로 초기화한다.
  */
 export function presetToFormState(preset: PresetFull, now = new Date()): LogFormState {
