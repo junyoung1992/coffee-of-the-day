@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RatingInput } from '../components/RatingInput'
@@ -243,7 +244,7 @@ function RecipePickerModal({
 
   const logs = data?.pages.flatMap((p) => p.items) ?? []
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
       onClick={onClose}
@@ -303,7 +304,8 @@ function RecipePickerModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -318,7 +320,7 @@ function RecipePickerSection({
     <>
       <section className="space-y-3 rounded-[1.75rem] border border-amber-950/10 bg-stone-50/65 p-5 sm:p-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-stone-950">레시피 불러���기</h2>
+          <h2 className="text-lg font-semibold text-stone-950">레시피 불러오기</h2>
           <p className="text-sm text-stone-600">이전 브루 기록의 레시피를 불러와 수정할 수 있습니다.</p>
         </div>
         <button
