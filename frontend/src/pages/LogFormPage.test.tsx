@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import LogFormPage from './LogFormPage'
@@ -9,6 +9,14 @@ vi.mock('../hooks/useLogs', () => ({
   useLog: () => ({ data: undefined, error: null, isError: false, isLoading: false }),
   useCreateLog: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
   useUpdateLog: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
+  useLogList: () => ({
+    data: { pages: [] },
+    fetchNextPage: vi.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    isLoading: false,
+    isError: false,
+  }),
 }))
 
 vi.mock('../hooks/useSuggestions', () => ({
@@ -87,6 +95,38 @@ function renderCloneMode(cloneFrom: CafeLogFull | BrewLogFull) {
   )
 }
 
+function renderNewMode() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={['/logs/new']}>
+        <Routes>
+          <Route path="/logs/new" element={<LogFormPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
+function renderEditMode(logId: string) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[`/logs/${logId}/edit`]}>
+        <Routes>
+          <Route path="/logs/:id/edit" element={<LogFormPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
@@ -150,5 +190,35 @@ describe('LogFormPage clone 모드', () => {
     const pressedButtons = screen.queryAllByRole('button', { pressed: true })
     const ratingPressed = pressedButtons.filter((btn) => /^\d\.\d$/.test(btn.textContent ?? ''))
     expect(ratingPressed).toHaveLength(0)
+  })
+})
+
+describe('RecipePickerSection 표시 조건', () => {
+  it('brew 새 로그 모드에서 "이전 레시피 불러오기" 버튼이 표시된다', () => {
+    renderNewMode()
+
+    // brew 타입 선택
+    fireEvent.click(screen.getByRole('button', { name: /Brew log/ }))
+
+    expect(screen.getByRole('button', { name: '이전 레시피 불러오기' })).toBeInTheDocument()
+  })
+
+  it('cafe 모드에서는 "이전 레시피 불러오기" 버튼이 표시되지 않는다', () => {
+    renderNewMode()
+
+    // 기본 로그 타입이 cafe이므로 바로 확인
+    expect(screen.queryByRole('button', { name: '이전 레시피 불러오기' })).not.toBeInTheDocument()
+  })
+
+  it('수정 모드에서는 "이전 레시피 불러오기" 버튼이 표시되지 않는다', () => {
+    renderEditMode('log-brew-1')
+
+    expect(screen.queryByRole('button', { name: '이전 레시피 불러오기' })).not.toBeInTheDocument()
+  })
+
+  it('clone 모드에서는 "이전 레시피 불러오기" 버튼이 표시되지 않는다', () => {
+    renderCloneMode(brewLog)
+
+    expect(screen.queryByRole('button', { name: '이전 레시피 불러오기' })).not.toBeInTheDocument()
   })
 })

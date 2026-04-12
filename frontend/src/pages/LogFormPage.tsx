@@ -29,6 +29,7 @@ import {
   type LogFormState,
 } from './logFormState'
 import type { BrewLogFull, CoffeeLogFull } from '../types/log'
+import { BREW_METHOD_LABELS } from '../utils/brewMethod'
 import type { PresetFull } from '../types/preset'
 
 // --- 공통 UI 유틸 ---
@@ -215,34 +216,19 @@ function PresetSection({
 
 // --- 레시피 불러오기 ---
 
-const brewMethodLabelMap: Record<string, string> = {
-  pour_over: 'Pour Over',
-  immersion: 'Immersion',
-  aeropress: 'AeroPress',
-  espresso: 'Espresso',
-  moka_pot: 'Moka Pot',
-  siphon: 'Siphon',
-  cold_brew: 'Cold Brew',
-  other: 'Other',
-}
-
 const dateFormatter = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' })
 
 function RecipePickerModal({
-  open,
   onClose,
   onSelect,
 }: {
-  open: boolean
   onClose: () => void
   onSelect: (log: BrewLogFull) => void
 }) {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
     useLogList({ log_type: 'brew' })
 
-  if (!open) return null
-
-  const logs = data?.pages.flatMap((p) => p.items) ?? []
+  const logs = (data?.pages.flatMap((p) => p.items) ?? []) as BrewLogFull[]
 
   return createPortal(
     <div
@@ -267,6 +253,10 @@ function RecipePickerModal({
         <div className="max-h-[60vh] overflow-y-auto p-4">
           {isLoading ? (
             <p className="py-8 text-center text-sm text-stone-500">불러오는 중...</p>
+          ) : isError ? (
+            <p className="py-8 text-center text-sm text-rose-600">
+              기록을 불러오지 못했습니다.
+            </p>
           ) : logs.length === 0 ? (
             <p className="py-8 text-center text-sm text-stone-500">
               아직 brew 기록이 없습니다.
@@ -277,14 +267,14 @@ function RecipePickerModal({
                 <button
                   key={log.id}
                   type="button"
-                  onClick={() => onSelect(log as BrewLogFull)}
+                  onClick={() => onSelect(log)}
                   className="w-full rounded-2xl border border-amber-950/10 bg-stone-50/65 p-4 text-left transition hover:border-amber-900/25 hover:bg-amber-50/60"
                 >
                   <p className="text-sm font-semibold text-stone-900">
-                    {(log as BrewLogFull).brew.bean_name}
+                    {log.brew.bean_name}
                   </p>
                   <p className="mt-1 text-xs text-stone-500">
-                    {brewMethodLabelMap[(log as BrewLogFull).brew.brew_method] ?? (log as BrewLogFull).brew.brew_method}
+                    {BREW_METHOD_LABELS[log.brew.brew_method] ?? log.brew.brew_method}
                     {' · '}
                     {dateFormatter.format(new Date(log.recorded_at))}
                   </p>
@@ -331,14 +321,15 @@ function RecipePickerSection({
           이전 레시피 불러오기
         </button>
       </section>
-      <RecipePickerModal
-        open={open}
-        onClose={() => setOpen(false)}
-        onSelect={(log) => {
-          onSelect(log)
-          setOpen(false)
-        }}
-      />
+      {open ? (
+        <RecipePickerModal
+          onClose={() => setOpen(false)}
+          onSelect={(log) => {
+            onSelect(log)
+            setOpen(false)
+          }}
+        />
+      ) : null}
     </>
   )
 }

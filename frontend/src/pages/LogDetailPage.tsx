@@ -7,22 +7,12 @@ import { useCreatePreset } from '../hooks/usePresets'
 import type { ApiErrorLike } from '../types/common'
 import type { CoffeeLogFull } from '../types/log'
 import type { CreatePresetInput } from '../types/preset'
+import { BREW_METHOD_LABELS } from '../utils/brewMethod'
 
 const roastLabels = {
   dark: 'Dark',
   light: 'Light',
   medium: 'Medium',
-} as const
-
-const brewMethodLabels = {
-  aeropress: 'AeroPress',
-  cold_brew: 'Cold Brew',
-  espresso: 'Espresso',
-  immersion: 'Immersion',
-  moka_pot: 'Moka Pot',
-  other: 'Other',
-  pour_over: 'Pour Over',
-  siphon: 'Siphon',
 } as const
 
 function formatDateTime(value: string) {
@@ -173,7 +163,7 @@ export default function LogDetailPage() {
                   <p className="mt-2 text-sm text-stone-600">
                     {log.log_type === 'cafe'
                       ? log.cafe.cafe_name
-                      : brewMethodLabels[log.brew.brew_method]}
+                      : BREW_METHOD_LABELS[log.brew.brew_method]}
                   </p>
                 </div>
               </div>
@@ -224,7 +214,7 @@ export default function LogDetailPage() {
               <h3 className="text-lg font-semibold text-stone-950">브루 상세</h3>
               <div className="grid gap-4 md:grid-cols-2">
                 <DetailField label="Bean" value={log.brew.bean_name} />
-                <DetailField label="Brew method" value={brewMethodLabels[log.brew.brew_method]} />
+                <DetailField label="Brew method" value={BREW_METHOD_LABELS[log.brew.brew_method]} />
                 <DetailField label="Brew device" value={log.brew.brew_device} />
                 <DetailField label="Roast date" value={log.brew.roast_date} />
                 <DetailField label="Bean origin" value={log.brew.bean_origin} />

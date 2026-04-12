@@ -113,6 +113,67 @@ describe('logToFormState', () => {
   })
 })
 
+// ---------------------------------------------------------------------------
+// 공유 fixture
+// ---------------------------------------------------------------------------
+
+const cafeLog: CafeLogFull = {
+  id: 'log-cafe-1',
+  user_id: 'user-1',
+  recorded_at: '2026-03-20T14:00:00Z',
+  companions: ['민수', '지연'],
+  log_type: 'cafe',
+  memo: '분위기 좋았다',
+  created_at: '2026-03-20T14:00:00Z',
+  updated_at: '2026-03-20T14:00:00Z',
+  cafe: {
+    cafe_name: '블루보틀 성수',
+    location: '서울 성수',
+    coffee_name: '게이샤 드립',
+    bean_origin: 'Ethiopia',
+    bean_process: 'washed',
+    roast_level: 'light',
+    tasting_tags: ['자몽', '꽃'],
+    tasting_note: '깔끔한 산미',
+    impressions: '다음에 또 오고 싶다',
+    rating: 4.5,
+  },
+}
+
+const brewLog: BrewLogFull = {
+  id: 'log-brew-1',
+  user_id: 'user-1',
+  recorded_at: '2026-03-22T09:00:00Z',
+  companions: ['수빈'],
+  log_type: 'brew',
+  memo: '아침 한 잔',
+  created_at: '2026-03-22T09:00:00Z',
+  updated_at: '2026-03-22T09:00:00Z',
+  brew: {
+    bean_name: '케냐 AB',
+    bean_origin: 'Kenya',
+    bean_process: 'washed',
+    roast_level: 'medium',
+    roast_date: '2026-03-18',
+    tasting_tags: ['베리', '홍차'],
+    tasting_note: '달콤한 뒷맛',
+    brew_method: 'pour_over',
+    brew_device: 'Origami',
+    coffee_amount_g: 18,
+    water_amount_ml: 300,
+    water_temp_c: 92,
+    brew_time_sec: 165,
+    grind_size: '중간',
+    brew_steps: ['뜸 40초', '3회 나눠 붓기'],
+    impressions: '맑고 길게 남는다',
+    rating: 4,
+  },
+}
+
+// ---------------------------------------------------------------------------
+// cloneToFormState
+// ---------------------------------------------------------------------------
+
 describe('cloneToFormState', () => {
   const cafeLog: CafeLogFull = {
     id: 'log-cafe-1',
@@ -237,36 +298,6 @@ describe('cloneToFormState', () => {
 // ---------------------------------------------------------------------------
 
 describe('recipeToFormState', () => {
-  const brewLog: BrewLogFull = {
-    id: 'log-brew-1',
-    user_id: 'user-1',
-    recorded_at: '2026-03-22T09:00:00Z',
-    companions: ['수빈'],
-    log_type: 'brew',
-    memo: '아침 한 잔',
-    created_at: '2026-03-22T09:00:00Z',
-    updated_at: '2026-03-22T09:00:00Z',
-    brew: {
-      bean_name: '케냐 AB',
-      bean_origin: 'Kenya',
-      bean_process: 'washed',
-      roast_level: 'medium',
-      roast_date: '2026-03-18',
-      tasting_tags: ['베리', '홍차'],
-      tasting_note: '달콤한 뒷맛',
-      brew_method: 'pour_over',
-      brew_device: 'Origami',
-      coffee_amount_g: 18,
-      water_amount_ml: 300,
-      water_temp_c: 92,
-      brew_time_sec: 165,
-      grind_size: '중간',
-      brew_steps: ['뜸 40초', '3회 나눠 붓기'],
-      impressions: '맑고 길게 남는다',
-      rating: 4,
-    },
-  }
-
   const recipeNow = new Date('2026-04-05T10:00:00')
 
   it('brew 로그에서 레시피 필드만 채운다', () => {
