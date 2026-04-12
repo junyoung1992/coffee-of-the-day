@@ -1,17 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import type { CoffeeLogFull } from '../types/log'
+import { BREW_METHOD_LABELS } from '../utils/brewMethod'
 import { RatingDisplay } from './RatingDisplay'
-
-const brewMethodLabelMap = {
-  aeropress: 'AeroPress',
-  cold_brew: 'Cold Brew',
-  espresso: 'Espresso',
-  immersion: 'Immersion',
-  moka_pot: 'Moka Pot',
-  other: 'Other',
-  pour_over: 'Pour Over',
-  siphon: 'Siphon',
-} as const
 
 function formatRecordedAt(value: string) {
   const parsed = new Date(value)
@@ -87,7 +77,7 @@ export function LogCard({ log }: { log: CoffeeLogFull }) {
   const subtitle =
     log.log_type === 'cafe'
       ? `${log.cafe.cafe_name}${log.cafe.location ? ` · ${log.cafe.location}` : ''}`
-      : `${brewMethodLabelMap[log.brew.brew_method]}${log.brew.brew_device ? ` · ${log.brew.brew_device}` : ''}`
+      : `${BREW_METHOD_LABELS[log.brew.brew_method]}${log.brew.brew_device ? ` · ${log.brew.brew_device}` : ''}`
 
   const tags =
     log.log_type === 'cafe' ? log.cafe.tasting_tags ?? [] : log.brew.tasting_tags ?? []

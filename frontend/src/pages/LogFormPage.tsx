@@ -6,12 +6,13 @@ import {
   type FormEvent,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RatingInput } from '../components/RatingInput'
 import { TagInput } from '../components/TagInput'
 import { ApiError } from '../api/client'
-import { useCreateLog, useLog, useUpdateLog } from '../hooks/useLogs'
+import { useCreateLog, useLog, useLogList, useUpdateLog } from '../hooks/useLogs'
 import { usePresetList, useUsePreset } from '../hooks/usePresets'
 import { useCompanionSuggestions, useTagSuggestions } from '../hooks/useSuggestions'
 import {
@@ -22,11 +23,13 @@ import {
   hasOptionalValues,
   logToFormState,
   presetToFormState,
+  recipeToFormState,
   roastLevelOptions,
   type FormLogType,
   type LogFormState,
 } from './logFormState'
-import type { CoffeeLogFull } from '../types/log'
+import type { BrewLogFull, CoffeeLogFull } from '../types/log'
+import { BREW_METHOD_LABELS } from '../utils/brewMethod'
 import type { PresetFull } from '../types/preset'
 
 // --- 공통 UI 유틸 ---
@@ -208,6 +211,126 @@ function PresetSection({
         ))}
       </div>
     </section>
+  )
+}
+
+// --- 레시피 불러오기 ---
+
+const dateFormatter = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' })
+
+function RecipePickerModal({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void
+  onSelect: (log: BrewLogFull) => void
+}) {
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
+    useLogList({ log_type: 'brew' })
+
+  const logs = (data?.pages.flatMap((p) => p.items) ?? []) as BrewLogFull[]
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="mx-4 w-full max-w-md rounded-[1.75rem] border border-amber-950/10 bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-amber-950/10 px-6 pt-5 pb-4">
+          <h3 className="text-lg font-semibold text-stone-950">이전 레시피 불러오기</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-800"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="max-h-[60vh] overflow-y-auto p-4">
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-stone-500">불러오는 중...</p>
+          ) : isError ? (
+            <p className="py-8 text-center text-sm text-rose-600">
+              기록을 불러오지 못했습니다.
+            </p>
+          ) : logs.length === 0 ? (
+            <p className="py-8 text-center text-sm text-stone-500">
+              아직 brew 기록이 없습니다.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {logs.map((log) => (
+                <button
+                  key={log.id}
+                  type="button"
+                  onClick={() => onSelect(log)}
+                  className="w-full rounded-2xl border border-amber-950/10 bg-stone-50/65 p-4 text-left transition hover:border-amber-900/25 hover:bg-amber-50/60"
+                >
+                  <p className="text-sm font-semibold text-stone-900">
+                    {log.brew.bean_name}
+                  </p>
+                  <p className="mt-1 text-xs text-stone-500">
+                    {BREW_METHOD_LABELS[log.brew.brew_method] ?? log.brew.brew_method}
+                    {' · '}
+                    {dateFormatter.format(new Date(log.recorded_at))}
+                  </p>
+                </button>
+              ))}
+              {hasNextPage ? (
+                <button
+                  type="button"
+                  onClick={() => void fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="w-full rounded-full border border-amber-950/10 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-amber-900/25 hover:bg-amber-50/60 disabled:opacity-50"
+                >
+                  {isFetchingNextPage ? '불러오는 중...' : '더 보기'}
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+function RecipePickerSection({
+  onSelect,
+}: {
+  onSelect: (log: BrewLogFull) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <section className="space-y-3 rounded-[1.75rem] border border-amber-950/10 bg-stone-50/65 p-5 sm:p-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-stone-950">레시피 불러오기</h2>
+          <p className="text-sm text-stone-600">이전 브루 기록의 레시피를 불러와 수정할 수 있습니다.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rounded-full border border-amber-950/10 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-amber-900/25 hover:bg-amber-50/60"
+        >
+          이전 레시피 불러오기
+        </button>
+      </section>
+      {open ? (
+        <RecipePickerModal
+          onClose={() => setOpen(false)}
+          onSelect={(log) => {
+            onSelect(log)
+            setOpen(false)
+          }}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -924,6 +1047,15 @@ export default function LogFormPage() {
               logType={form.logType}
               onSelect={(preset) => {
                 const formState = presetToFormState(preset)
+                setForm(formState)
+                setExpanded(hasOptionalValues(formState))
+              }}
+            />
+          ) : null}
+          {!isEditMode && !isCloneMode && form.logType === 'brew' ? (
+            <RecipePickerSection
+              onSelect={(log) => {
+                const formState = recipeToFormState(log)
                 setForm(formState)
                 setExpanded(hasOptionalValues(formState))
               }}

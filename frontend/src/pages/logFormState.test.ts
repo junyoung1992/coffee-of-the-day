@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLogPayload, cloneToFormState, createEmptyFormState, hasOptionalValues, logToFormState, presetToFormState } from './logFormState'
+import { buildLogPayload, cloneToFormState, createEmptyFormState, hasOptionalValues, logToFormState, presetToFormState, recipeToFormState } from './logFormState'
 import type { CafeLogFull, BrewLogFull, CoffeeLogFull } from '../types/log'
 import type { CafePresetFull, BrewPresetFull } from '../types/preset'
 
@@ -112,6 +112,67 @@ describe('logToFormState', () => {
     expect(state.brew.rating).toBe('4.5')
   })
 })
+
+// ---------------------------------------------------------------------------
+// 공유 fixture
+// ---------------------------------------------------------------------------
+
+const cafeLog: CafeLogFull = {
+  id: 'log-cafe-1',
+  user_id: 'user-1',
+  recorded_at: '2026-03-20T14:00:00Z',
+  companions: ['민수', '지연'],
+  log_type: 'cafe',
+  memo: '분위기 좋았다',
+  created_at: '2026-03-20T14:00:00Z',
+  updated_at: '2026-03-20T14:00:00Z',
+  cafe: {
+    cafe_name: '블루보틀 성수',
+    location: '서울 성수',
+    coffee_name: '게이샤 드립',
+    bean_origin: 'Ethiopia',
+    bean_process: 'washed',
+    roast_level: 'light',
+    tasting_tags: ['자몽', '꽃'],
+    tasting_note: '깔끔한 산미',
+    impressions: '다음에 또 오고 싶다',
+    rating: 4.5,
+  },
+}
+
+const brewLog: BrewLogFull = {
+  id: 'log-brew-1',
+  user_id: 'user-1',
+  recorded_at: '2026-03-22T09:00:00Z',
+  companions: ['수빈'],
+  log_type: 'brew',
+  memo: '아침 한 잔',
+  created_at: '2026-03-22T09:00:00Z',
+  updated_at: '2026-03-22T09:00:00Z',
+  brew: {
+    bean_name: '케냐 AB',
+    bean_origin: 'Kenya',
+    bean_process: 'washed',
+    roast_level: 'medium',
+    roast_date: '2026-03-18',
+    tasting_tags: ['베리', '홍차'],
+    tasting_note: '달콤한 뒷맛',
+    brew_method: 'pour_over',
+    brew_device: 'Origami',
+    coffee_amount_g: 18,
+    water_amount_ml: 300,
+    water_temp_c: 92,
+    brew_time_sec: 165,
+    grind_size: '중간',
+    brew_steps: ['뜸 40초', '3회 나눠 붓기'],
+    impressions: '맑고 길게 남는다',
+    rating: 4,
+  },
+}
+
+// ---------------------------------------------------------------------------
+// cloneToFormState
+// ---------------------------------------------------------------------------
 
 describe('cloneToFormState', () => {
   const cafeLog: CafeLogFull = {
@@ -229,6 +290,55 @@ describe('cloneToFormState', () => {
     expect(state.brew.brewTimeSec).toBe('165')
     expect(state.brew.grindSize).toBe('중간')
     expect(state.brew.brewSteps).toEqual(['뜸 40초', '3회 나눠 붓기'])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// recipeToFormState
+// ---------------------------------------------------------------------------
+
+describe('recipeToFormState', () => {
+  const recipeNow = new Date('2026-04-05T10:00:00')
+
+  it('brew 로그에서 레시피 필드만 채운다', () => {
+    const state = recipeToFormState(brewLog, recipeNow)
+
+    expect(state.brew.beanName).toBe('케냐 AB')
+    expect(state.brew.beanOrigin).toBe('Kenya')
+    expect(state.brew.beanProcess).toBe('washed')
+    expect(state.brew.roastLevel).toBe('medium')
+    expect(state.brew.roastDate).toBe('2026-03-18')
+    expect(state.brew.brewMethod).toBe('pour_over')
+    expect(state.brew.brewDevice).toBe('Origami')
+    expect(state.brew.coffeeAmountG).toBe('18')
+    expect(state.brew.waterAmountMl).toBe('300')
+    expect(state.brew.waterTempC).toBe('92')
+    expect(state.brew.brewTimeSec).toBe('165')
+    expect(state.brew.grindSize).toBe('중간')
+    expect(state.brew.brewSteps).toEqual(['뜸 40초', '3회 나눠 붓기'])
+  })
+
+  it('평가/메모/태그 필드는 비어 있다', () => {
+    const state = recipeToFormState(brewLog, recipeNow)
+
+    expect(state.brew.rating).toBe('')
+    expect(state.brew.tastingTags).toEqual([])
+    expect(state.brew.tastingNote).toBe('')
+    expect(state.brew.impressions).toBe('')
+    expect(state.memo).toBe('')
+    expect(state.companions).toEqual([])
+  })
+
+  it('recorded_at이 현재 시각으로 초기화된다', () => {
+    const state = recipeToFormState(brewLog, recipeNow)
+
+    expect(state.recordedAt).toBe('2026-04-05T10:00')
+  })
+
+  it('logType이 brew로 설정된다', () => {
+    const state = recipeToFormState(brewLog, recipeNow)
+
+    expect(state.logType).toBe('brew')
   })
 })
 

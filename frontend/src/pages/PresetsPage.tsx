@@ -8,17 +8,7 @@ import {
 } from '../hooks/usePresets'
 import type { PresetFull, UpdatePresetInput } from '../types/preset'
 import type { ApiErrorLike } from '../types/common'
-
-const brewMethodLabels: Record<string, string> = {
-  aeropress: 'AeroPress',
-  cold_brew: 'Cold Brew',
-  espresso: 'Espresso',
-  immersion: 'Immersion',
-  moka_pot: 'Moka Pot',
-  other: 'Other',
-  pour_over: 'Pour Over',
-  siphon: 'Siphon',
-}
+import { BREW_METHOD_LABELS } from '../utils/brewMethod'
 
 function formatRelativeDate(value: string | null | undefined) {
   if (!value) return '사용 기록 없음'
@@ -143,7 +133,7 @@ function PresetCard({
           <p className="text-sm text-stone-600">
             {preset.log_type === 'cafe'
               ? `${preset.cafe.cafe_name} · ${preset.cafe.coffee_name}`
-              : `${preset.brew.bean_name} · ${brewMethodLabels[preset.brew.brew_method] ?? preset.brew.brew_method}`}
+              : `${preset.brew.bean_name} · ${BREW_METHOD_LABELS[preset.brew.brew_method] ?? preset.brew.brew_method}`}
           </p>
           {preset.log_type === 'cafe' && preset.cafe.tasting_tags && preset.cafe.tasting_tags.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
