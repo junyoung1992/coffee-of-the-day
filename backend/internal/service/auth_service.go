@@ -218,7 +218,7 @@ func (s *DefaultAuthService) parseTokenClaims(tokenStr, expectedType string) (*t
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return s.jwtSecret, nil
-	})
+	}, jwt.WithTimeFunc(s.now))
 	if err != nil {
 		return nil, err
 	}
