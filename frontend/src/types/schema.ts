@@ -217,6 +217,11 @@ export interface paths {
                     cursor?: string;
                     /** @description 페이지당 항목 수 */
                     limit?: number;
+                    /**
+                     * @description 목록 필터. 기본값 published(완성된 로그만).
+                     *     draft는 작성 중인 로그, all은 전체.
+                     */
+                    status?: "draft" | "published" | "all";
                 };
                 header?: never;
                 path?: never;
@@ -572,7 +577,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    /** @description 검색어 (빈 문자열이면 전체 반환) */
+                    /** @description 검색어 (1자 미만이거나 누락 시 빈 배열 반환, 에러 아님) */
                     q?: string;
                 };
                 header?: never;
@@ -612,7 +617,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    /** @description 검색어 (빈 문자열이면 전체 반환) */
+                    /** @description 검색어 (1자 미만이거나 누락 시 빈 배열 반환, 에러 아님) */
                     q?: string;
                 };
                 header?: never;
@@ -682,6 +687,12 @@ export interface components {
          * @enum {string}
          */
         LogType: "cafe" | "brew";
+        /**
+         * @description draft = 작성 중 임시 저장 상태 (필수 필드 일부만 채워도 저장 가능,
+         *     통계/자동완성에서 제외됨). published = 정식 발행 상태. 기본값은 published.
+         * @enum {string}
+         */
+        LogStatus: "draft" | "published";
         /** @enum {string} */
         RoastLevel: "light" | "medium" | "dark";
         /** @enum {string} */
@@ -737,6 +748,7 @@ export interface components {
             recorded_at: string;
             companions: string[];
             log_type: components["schemas"]["LogType"];
+            status: components["schemas"]["LogStatus"];
             memo?: string | null;
             /** Format: date-time */
             created_at: string;
@@ -753,6 +765,7 @@ export interface components {
             recorded_at: string;
             companions?: string[];
             log_type: components["schemas"]["LogType"];
+            status?: components["schemas"]["LogStatus"];
             memo?: string | null;
             cafe?: components["schemas"]["CafeDetail"];
             brew?: components["schemas"]["BrewDetail"];
@@ -762,6 +775,7 @@ export interface components {
             recorded_at: string;
             companions?: string[];
             log_type: components["schemas"]["LogType"];
+            status?: components["schemas"]["LogStatus"];
             memo?: string | null;
             cafe?: components["schemas"]["CafeDetail"];
             brew?: components["schemas"]["BrewDetail"];

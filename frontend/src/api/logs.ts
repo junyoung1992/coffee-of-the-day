@@ -8,6 +8,11 @@ export interface ListLogsParams {
   date_to?: string
   cursor?: string
   limit?: number
+  /**
+   * 목록 status 필터. 미지정 시 백엔드가 published만 반환한다(기존 호환).
+   * 'draft'는 작성 중 로그만, 'all'은 published+draft 전체.
+   */
+  status?: 'draft' | 'published' | 'all'
 }
 
 export function getLogs(params: ListLogsParams = {}): Promise<CursorPage<CoffeeLogFull>> {
@@ -17,6 +22,7 @@ export function getLogs(params: ListLogsParams = {}): Promise<CursorPage<CoffeeL
   if (params.date_to) q.set('date_to', params.date_to)
   if (params.cursor) q.set('cursor', params.cursor)
   if (params.limit !== undefined) q.set('limit', String(params.limit))
+  if (params.status) q.set('status', params.status)
   const qs = q.toString()
   return request(`/logs${qs ? `?${qs}` : ''}`)
 }
