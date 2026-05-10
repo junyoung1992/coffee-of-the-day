@@ -18,6 +18,7 @@ import { useCompanionSuggestions, useTagSuggestions } from '../hooks/useSuggesti
 import {
   brewMethodOptions,
   buildLogPayload,
+  canSaveAsDraft,
   cloneToFormState,
   createEmptyFormState,
   hasOptionalValues,
@@ -984,7 +985,9 @@ export default function LogFormPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFieldErrors({})
-    const payload = buildLogPayload(form)
+    // 메인 저장 버튼은 항상 published 발행 의도. 드래프트 → published 전환도
+    // 동일한 흐름을 타며, 백엔드에서 published 검증이 적용된다.
+    const payload = buildLogPayload(form, { status: 'published' })
 
     try {
       const saved = isEditMode && id
@@ -999,6 +1002,34 @@ export default function LogFormPage() {
     }
   }
 
+  // 임시 저장: 현재 입력값을 status='draft'로 저장한다. 신규 작성과 드래프트
+  // 수정 모드에서만 노출되며, published 로그를 다시 draft로 되돌리는 흐름은
+  // 백엔드에서도 거부되므로 UI에서도 버튼을 숨긴다.
+  async function handleDraftSave() {
+    setFieldErrors({})
+    const payload = buildLogPayload(form, { status: 'draft' })
+
+    try {
+      if (isEditMode && id) {
+        await updateMutation.mutateAsync(payload)
+      } else {
+        await createMutation.mutateAsync(payload)
+      }
+      navigate('/')
+    } catch (err) {
+      if (err instanceof ApiError && err.field) {
+        setFieldErrors({ [err.field]: err.message })
+      }
+    }
+  }
+
+  // 드래프트 저장 버튼 노출 조건:
+  //  - 신규 작성 모드: 항상 노출
+  //  - 수정 모드: 기존 로그가 draft인 경우만 노출 (published → draft 회귀 차단)
+  const showDraftButton = !isEditMode || (isEditMode && log?.status === 'draft')
+  const draftDisabled =
+    !canSaveAsDraft(form) || activeMutation.isPending || (isEditMode && isLoading)
+
   return (
     <Layout
       title={isEditMode ? '기록 수정' : isCloneMode ? '기록 복제' : '커피 기록 추가'}
@@ -1011,6 +1042,16 @@ export default function LogFormPage() {
           >
             {isEditMode ? '상세로' : '목록으로'}
           </Link>
+          {showDraftButton ? (
+            <button
+              type="button"
+              onClick={() => void handleDraftSave()}
+              disabled={draftDisabled}
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-amber-900/20 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {activeMutation.isPending ? '저장 중...' : '임시 저장'}
+            </button>
+          ) : null}
           <button
             type="submit"
             form="log-form"
