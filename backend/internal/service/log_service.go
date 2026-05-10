@@ -40,18 +40,23 @@ type CreateLogRequest struct {
 	RecordedAt string
 	Companions []string
 	LogType    domain.LogType
-	Memo       *string
-	Cafe       *domain.CafeDetail
-	Brew       *domain.BrewDetail
+	// Status는 빈 값이면 published로 처리한다. draft는 미완성 저장 의도로,
+	// cafe_name/coffee_name 또는 bean_name/brew_method 중 하나만 채우면 통과한다.
+	Status domain.LogStatus
+	Memo   *string
+	Cafe   *domain.CafeDetail
+	Brew   *domain.BrewDetail
 }
 
 type UpdateLogRequest struct {
 	RecordedAt string
 	Companions []string
 	LogType    domain.LogType
-	Memo       *string
-	Cafe       *domain.CafeDetail
-	Brew       *domain.BrewDetail
+	// Status는 빈 값이면 기존 status를 유지한다. published → draft 회귀는 거부한다.
+	Status domain.LogStatus
+	Memo   *string
+	Cafe   *domain.CafeDetail
+	Brew   *domain.BrewDetail
 }
 
 // defaultTimezone은 날짜 필터의 기본 타임존이다.
@@ -62,6 +67,9 @@ type ListLogsFilter struct {
 	LogType  *domain.LogType
 	DateFrom *string
 	DateTo   *string
+	// Status는 "published", "draft", "all" 중 하나. nil/빈 문자열이면 "published".
+	// 통계/자동완성 등 기존 호출 지점이 변경 없이 안전하도록 기본값을 published로 둔다.
+	Status   *string
 	Cursor   *string
 	Limit    int
 	// Timezone은 YYYY-MM-DD 날짜 필터를 UTC 경계로 변환할 때 사용하는 타임존이다.
@@ -121,6 +129,7 @@ func (s *DefaultLogService) CreateLog(ctx context.Context, userID string, req Cr
 			RecordedAt: normalizedReq.RecordedAt,
 			Companions: normalizedReq.Companions,
 			LogType:    normalizedReq.LogType,
+			Status:     normalizedReq.Status,
 			Memo:       normalizedReq.Memo,
 			CreatedAt:  now,
 			UpdatedAt:  now,
@@ -213,7 +222,7 @@ func (s *DefaultLogService) UpdateLog(ctx context.Context, userID, logID string,
 		return domain.CoffeeLogFull{}, mapRepositoryError("update log", err)
 	}
 
-	normalizedReq, err := normalizeUpdateRequest(req, existing.LogType)
+	normalizedReq, err := normalizeUpdateRequest(req, existing)
 	if err != nil {
 		return domain.CoffeeLogFull{}, err
 	}
@@ -225,6 +234,7 @@ func (s *DefaultLogService) UpdateLog(ctx context.Context, userID, logID string,
 			RecordedAt: normalizedReq.RecordedAt,
 			Companions: normalizedReq.Companions,
 			LogType:    existing.LogType,
+			Status:     normalizedReq.Status,
 			Memo:       normalizedReq.Memo,
 			CreatedAt:  existing.CreatedAt,
 			UpdatedAt:  s.now().UTC().Format(time.RFC3339),
@@ -263,6 +273,11 @@ func normalizeCreateRequest(req CreateLogRequest) (CreateLogRequest, error) {
 		return CreateLogRequest{}, err
 	}
 
+	status, err := validateLogStatus("status", req.Status)
+	if err != nil {
+		return CreateLogRequest{}, err
+	}
+
 	recordedAt, err := validateRecordedAt(req.RecordedAt)
 	if err != nil {
 		return CreateLogRequest{}, err
@@ -272,44 +287,48 @@ func normalizeCreateRequest(req CreateLogRequest) (CreateLogRequest, error) {
 		RecordedAt: recordedAt,
 		Companions: normalizeStringSlice(req.Companions),
 		LogType:    logType,
+		Status:     status,
 		Memo:       normalizeOptionalString(req.Memo),
 	}
 
-	switch logType {
-	case domain.LogTypeCafe:
-		if req.Brew != nil {
-			return CreateLogRequest{}, newValidationError("brew", "cafe 로그에는 brew 상세를 함께 보낼 수 없습니다")
-		}
-		detail, err := normalizeCafeDetail(req.Cafe)
-		if err != nil {
-			return CreateLogRequest{}, err
-		}
-		normalized.Cafe = detail
-	case domain.LogTypeBrew:
-		if req.Cafe != nil {
-			return CreateLogRequest{}, newValidationError("cafe", "brew 로그에는 cafe 상세를 함께 보낼 수 없습니다")
-		}
-		detail, err := normalizeBrewDetail(req.Brew)
-		if err != nil {
-			return CreateLogRequest{}, err
-		}
-		normalized.Brew = detail
+	cafe, brew, err := normalizeDetailsForStatus(logType, status, req.Cafe, req.Brew)
+	if err != nil {
+		return CreateLogRequest{}, err
 	}
+	normalized.Cafe = cafe
+	normalized.Brew = brew
 
 	return normalized, nil
 }
 
-func normalizeUpdateRequest(req UpdateLogRequest, existingLogType domain.LogType) (UpdateLogRequest, error) {
-	logType := existingLogType
+func normalizeUpdateRequest(req UpdateLogRequest, existing domain.CoffeeLogFull) (UpdateLogRequest, error) {
+	logType := existing.LogType
 	if req.LogType != "" {
 		validatedLogType, err := validateLogType("log_type", req.LogType)
 		if err != nil {
 			return UpdateLogRequest{}, err
 		}
-		if validatedLogType != existingLogType {
+		if validatedLogType != existing.LogType {
 			return UpdateLogRequest{}, newValidationError("log_type", "기존 로그 타입은 수정할 수 없습니다")
 		}
 		logType = validatedLogType
+	}
+
+	// status 전이 검증: 빈 값이면 기존 status를 유지하고, 명시되면 published → draft
+	// 회귀를 차단한다. 발행된 로그를 다시 미완성 상태로 되돌리는 것은 데이터 정합성과
+	// 인사이트 집계 관점에서 의미가 없으므로 service 레이어에서 명시적으로 거부한다.
+	var status domain.LogStatus
+	if req.Status == "" {
+		status = existing.Status
+	} else {
+		validated, err := validateLogStatus("status", req.Status)
+		if err != nil {
+			return UpdateLogRequest{}, err
+		}
+		if existing.Status == domain.LogStatusPublished && validated == domain.LogStatusDraft {
+			return UpdateLogRequest{}, newValidationError("status", "발행된 로그를 드래프트로 되돌릴 수 없습니다")
+		}
+		status = validated
 	}
 
 	recordedAt, err := validateRecordedAt(req.RecordedAt)
@@ -321,31 +340,61 @@ func normalizeUpdateRequest(req UpdateLogRequest, existingLogType domain.LogType
 		RecordedAt: recordedAt,
 		Companions: normalizeStringSlice(req.Companions),
 		LogType:    logType,
+		Status:     status,
 		Memo:       normalizeOptionalString(req.Memo),
 	}
 
-	switch logType {
-	case domain.LogTypeCafe:
-		if req.Brew != nil {
-			return UpdateLogRequest{}, newValidationError("brew", "cafe 로그에는 brew 상세를 함께 보낼 수 없습니다")
-		}
-		detail, err := normalizeCafeDetail(req.Cafe)
-		if err != nil {
-			return UpdateLogRequest{}, err
-		}
-		normalized.Cafe = detail
-	case domain.LogTypeBrew:
-		if req.Cafe != nil {
-			return UpdateLogRequest{}, newValidationError("cafe", "brew 로그에는 cafe 상세를 함께 보낼 수 없습니다")
-		}
-		detail, err := normalizeBrewDetail(req.Brew)
-		if err != nil {
-			return UpdateLogRequest{}, err
-		}
-		normalized.Brew = detail
+	cafe, brew, err := normalizeDetailsForStatus(logType, status, req.Cafe, req.Brew)
+	if err != nil {
+		return UpdateLogRequest{}, err
 	}
+	normalized.Cafe = cafe
+	normalized.Brew = brew
 
 	return normalized, nil
+}
+
+// normalizeDetailsForStatus는 logType/status 조합에 따라 cafe/brew 상세를 검증·정규화한다.
+// draft는 cafe_name/coffee_name 또는 bean_name/brew_method 중 하나만 채우면 통과,
+// published는 기존 필수 필드를 모두 만족해야 한다.
+func normalizeDetailsForStatus(logType domain.LogType, status domain.LogStatus, cafe *domain.CafeDetail, brew *domain.BrewDetail) (*domain.CafeDetail, *domain.BrewDetail, error) {
+	switch logType {
+	case domain.LogTypeCafe:
+		if brew != nil {
+			return nil, nil, newValidationError("brew", "cafe 로그에는 brew 상세를 함께 보낼 수 없습니다")
+		}
+		var (
+			detail *domain.CafeDetail
+			err    error
+		)
+		if status == domain.LogStatusDraft {
+			detail, err = normalizeCafeDetailDraft(cafe)
+		} else {
+			detail, err = normalizeCafeDetail(cafe)
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+		return detail, nil, nil
+	case domain.LogTypeBrew:
+		if cafe != nil {
+			return nil, nil, newValidationError("cafe", "brew 로그에는 cafe 상세를 함께 보낼 수 없습니다")
+		}
+		var (
+			detail *domain.BrewDetail
+			err    error
+		)
+		if status == domain.LogStatusDraft {
+			detail, err = normalizeBrewDetailDraft(brew)
+		} else {
+			detail, err = normalizeBrewDetail(brew)
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, detail, nil
+	}
+	return nil, nil, nil
 }
 
 func normalizeListFilter(filter ListLogsFilter) (repository.ListFilter, int, error) {
@@ -367,6 +416,7 @@ func normalizeListFilter(filter ListLogsFilter) (repository.ListFilter, int, err
 		logTypeStr *string
 		dateFrom   *string
 		dateTo     *string
+		statusStr  *string
 		cursor     *repository.Cursor
 	)
 
@@ -378,6 +428,23 @@ func normalizeListFilter(filter ListLogsFilter) (repository.ListFilter, int, err
 		s := string(logType)
 		logTypeStr = &s
 	}
+
+	// status 정규화: 빈 값/nil은 published(기본 동작 보존), draft/published/all만 허용.
+	statusValue := "published"
+	if filter.Status != nil {
+		raw := strings.TrimSpace(*filter.Status)
+		switch raw {
+		case "", "published":
+			statusValue = "published"
+		case "draft":
+			statusValue = "draft"
+		case "all":
+			statusValue = "all"
+		default:
+			return repository.ListFilter{}, 0, newValidationError("status", "published, draft, all 중 하나여야 합니다")
+		}
+	}
+	statusStr = &statusValue
 
 	// 타임존 로드: YYYY-MM-DD 날짜 필터를 해당 타임존 기준 UTC 경계로 변환하기 위해 필요하다.
 	// Timezone이 지정되지 않으면 앱 기본값(Asia/Seoul)을 사용한다.
@@ -441,6 +508,7 @@ func normalizeListFilter(filter ListLogsFilter) (repository.ListFilter, int, err
 		LogType:  logTypeStr,
 		DateFrom: dateFrom,
 		DateTo:   dateTo,
+		Status:   statusStr,
 		Cursor:   cursor,
 		Limit:    limit,
 	}, limit, nil
@@ -459,6 +527,44 @@ func normalizeCafeDetail(detail *domain.CafeDetail) (*domain.CafeDetail, error) 
 	if err != nil {
 		return nil, err
 	}
+	roastLevel, err := validateRoastLevel(detail.RoastLevel)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateRating("cafe.rating", detail.Rating); err != nil {
+		return nil, err
+	}
+
+	return &domain.CafeDetail{
+		CafeName:    cafeName,
+		Location:    normalizeOptionalString(detail.Location),
+		CoffeeName:  coffeeName,
+		BeanOrigin:  normalizeOptionalString(detail.BeanOrigin),
+		BeanProcess: normalizeOptionalString(detail.BeanProcess),
+		RoastLevel:  roastLevel,
+		TastingTags: normalizeStringSlice(detail.TastingTags),
+		TastingNote: normalizeOptionalString(detail.TastingNote),
+		Impressions: normalizeOptionalString(detail.Impressions),
+		Rating:      cloneFloat64(detail.Rating),
+	}, nil
+}
+
+// normalizeCafeDetailDraft는 draft 상태의 cafe 상세를 검증·정규화한다.
+// cafe_name 또는 coffee_name 중 하나는 비어있지 않아야 하며, 그 외 필드는
+// 모두 빈 문자열을 허용한다. NOT NULL + 빈 문자열 전략이므로 빈 값은 trim 후
+// 그대로 저장한다(domain.CafeDetail.CafeName 같은 string 필드는 *string으로
+// 변경하지 않고 빈 문자열을 유지).
+func normalizeCafeDetailDraft(detail *domain.CafeDetail) (*domain.CafeDetail, error) {
+	if detail == nil {
+		detail = &domain.CafeDetail{}
+	}
+
+	cafeName := strings.TrimSpace(detail.CafeName)
+	coffeeName := strings.TrimSpace(detail.CoffeeName)
+	if cafeName == "" && coffeeName == "" {
+		return nil, newValidationError("cafe", "카페 이름이나 메뉴 이름 중 하나는 입력해야 합니다")
+	}
+
 	roastLevel, err := validateRoastLevel(detail.RoastLevel)
 	if err != nil {
 		return nil, err
@@ -539,6 +645,76 @@ func normalizeBrewDetail(detail *domain.BrewDetail) (*domain.BrewDetail, error) 
 	}, nil
 }
 
+// normalizeBrewDetailDraft는 draft 상태의 brew 상세를 검증·정규화한다.
+// bean_name 또는 brew_method 중 하나는 채워져 있어야 한다. brew_method는
+// 빈 값일 경우에는 enum 검증을 건너뛰고 그대로 저장한다(NOT NULL CHECK 위반을
+// 방지하기 위해 사실상 사용자가 brew_method를 비워두는 경우는 발생하지 않지만,
+// 방어적으로 처리).
+func normalizeBrewDetailDraft(detail *domain.BrewDetail) (*domain.BrewDetail, error) {
+	if detail == nil {
+		detail = &domain.BrewDetail{}
+	}
+
+	beanName := strings.TrimSpace(detail.BeanName)
+	brewMethodRaw := strings.TrimSpace(string(detail.BrewMethod))
+	if beanName == "" && brewMethodRaw == "" {
+		return nil, newValidationError("brew", "원두 이름이나 추출 방식 중 하나는 입력해야 합니다")
+	}
+
+	var brewMethod domain.BrewMethod
+	if brewMethodRaw != "" {
+		validated, err := validateBrewMethod(domain.BrewMethod(brewMethodRaw))
+		if err != nil {
+			return nil, err
+		}
+		brewMethod = validated
+	}
+
+	roastLevel, err := validateRoastLevel(detail.RoastLevel)
+	if err != nil {
+		return nil, err
+	}
+	roastDate, err := validateRoastDate(detail.RoastDate)
+	if err != nil {
+		return nil, err
+	}
+	if err := validatePositiveFloat("brew.coffee_amount_g", detail.CoffeeAmountG); err != nil {
+		return nil, err
+	}
+	if err := validatePositiveFloat("brew.water_amount_ml", detail.WaterAmountMl); err != nil {
+		return nil, err
+	}
+	if err := validatePositiveFloat("brew.water_temp_c", detail.WaterTempC); err != nil {
+		return nil, err
+	}
+	if err := validatePositiveInt("brew.brew_time_sec", detail.BrewTimeSec); err != nil {
+		return nil, err
+	}
+	if err := validateRating("brew.rating", detail.Rating); err != nil {
+		return nil, err
+	}
+
+	return &domain.BrewDetail{
+		BeanName:      beanName,
+		BeanOrigin:    normalizeOptionalString(detail.BeanOrigin),
+		BeanProcess:   normalizeOptionalString(detail.BeanProcess),
+		RoastLevel:    roastLevel,
+		RoastDate:     roastDate,
+		TastingTags:   normalizeStringSlice(detail.TastingTags),
+		TastingNote:   normalizeOptionalString(detail.TastingNote),
+		BrewMethod:    brewMethod,
+		BrewDevice:    normalizeOptionalString(detail.BrewDevice),
+		CoffeeAmountG: cloneFloat64(detail.CoffeeAmountG),
+		WaterAmountMl: cloneFloat64(detail.WaterAmountMl),
+		WaterTempC:    cloneFloat64(detail.WaterTempC),
+		BrewTimeSec:   cloneInt(detail.BrewTimeSec),
+		GrindSize:     normalizeOptionalString(detail.GrindSize),
+		BrewSteps:     normalizeStringSlice(detail.BrewSteps),
+		Impressions:   normalizeOptionalString(detail.Impressions),
+		Rating:        cloneFloat64(detail.Rating),
+	}, nil
+}
+
 func validateIdentifier(field, value string) (string, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -561,6 +737,21 @@ func validateLogType(field string, logType domain.LogType) (domain.LogType, erro
 		return logType, nil
 	default:
 		return "", newValidationError(field, "cafe 또는 brew만 허용됩니다")
+	}
+}
+
+// validateLogStatus는 빈 값을 published로 정규화하고 enum을 검증한다.
+// 빈 값을 published로 매핑하는 이유: API 사용자가 status를 명시하지 않을 때
+// 기본 발행 의도로 간주하여 기존 클라이언트와의 호환성을 유지한다.
+func validateLogStatus(field string, status domain.LogStatus) (domain.LogStatus, error) {
+	if status == "" {
+		return domain.LogStatusPublished, nil
+	}
+	switch status {
+	case domain.LogStatusDraft, domain.LogStatusPublished:
+		return status, nil
+	default:
+		return "", newValidationError(field, "draft 또는 published만 허용됩니다")
 	}
 }
 

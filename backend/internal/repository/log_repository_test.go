@@ -452,3 +452,99 @@ func TestDeleteLog_RemovesLogAndCascadesToSubTable(t *testing.T) {
 	assert.Equal(t, 0, count, "cafe_logs row should be deleted by CASCADE")
 }
 
+// ---------------------------------------------------------------------------
+// 11. Status round-trip — draft 로그를 저장하고 다시 읽어와 status가 보존되는지
+// ---------------------------------------------------------------------------
+
+func TestCreateAndGetCafeLog_DraftStatus_RoundTrip(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewSQLiteLogRepository(db)
+	ctx := context.Background()
+
+	cafe := newCafeLog("log-draft-001", "2026-03-15")
+	cafe.Status = domain.LogStatusDraft
+
+	require.NoError(t, repo.CreateLog(ctx, cafe))
+
+	got, err := repo.GetLogByID(ctx, "log-draft-001", testUserID)
+	require.NoError(t, err)
+
+	assert.Equal(t, domain.LogStatusDraft, got.Status)
+}
+
+// ---------------------------------------------------------------------------
+// 12. ListLogs status filter — 기본/draft/all
+// ---------------------------------------------------------------------------
+
+func TestListLogs_StatusFilter(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewSQLiteLogRepository(db)
+	ctx := context.Background()
+
+	// 시드: published 2건 + draft 1건.
+	pub1 := newCafeLog("log-pub-1", "2026-03-15")
+	pub2 := newCafeLog("log-pub-2", "2026-03-16")
+	draft1 := newCafeLog("log-draft-1", "2026-03-17")
+	draft1.Status = domain.LogStatusDraft
+
+	require.NoError(t, repo.CreateLog(ctx, pub1))
+	require.NoError(t, repo.CreateLog(ctx, pub2))
+	require.NoError(t, repo.CreateLog(ctx, draft1))
+
+	t.Run("status nil → published만", func(t *testing.T) {
+		result, err := repo.ListLogs(ctx, testUserID, ListFilter{Limit: 20})
+		require.NoError(t, err)
+		assert.Len(t, result, 2)
+		for _, item := range result {
+			assert.Equal(t, domain.LogStatusPublished, item.Status)
+		}
+	})
+
+	t.Run("status=published → published만", func(t *testing.T) {
+		published := "published"
+		result, err := repo.ListLogs(ctx, testUserID, ListFilter{Status: &published, Limit: 20})
+		require.NoError(t, err)
+		assert.Len(t, result, 2)
+	})
+
+	t.Run("status=draft → draft만", func(t *testing.T) {
+		draft := "draft"
+		result, err := repo.ListLogs(ctx, testUserID, ListFilter{Status: &draft, Limit: 20})
+		require.NoError(t, err)
+		require.Len(t, result, 1)
+		assert.Equal(t, "log-draft-1", result[0].ID)
+		assert.Equal(t, domain.LogStatusDraft, result[0].Status)
+	})
+
+	t.Run("status=all → 전체", func(t *testing.T) {
+		all := "all"
+		result, err := repo.ListLogs(ctx, testUserID, ListFilter{Status: &all, Limit: 20})
+		require.NoError(t, err)
+		assert.Len(t, result, 3)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// 13. UpdateLog — status 변경(draft → published) 시 정상 반영
+// ---------------------------------------------------------------------------
+
+func TestUpdateLog_StatusTransition(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewSQLiteLogRepository(db)
+	ctx := context.Background()
+
+	cafe := newCafeLog("log-trans-001", "2026-03-15")
+	cafe.Status = domain.LogStatusDraft
+	require.NoError(t, repo.CreateLog(ctx, cafe))
+
+	// draft → published 로 전환.
+	updated := cafe
+	updated.Status = domain.LogStatusPublished
+	updated.UpdatedAt = "2026-03-16T00:00:00Z"
+	require.NoError(t, repo.UpdateLog(ctx, updated))
+
+	got, err := repo.GetLogByID(ctx, "log-trans-001", testUserID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.LogStatusPublished, got.Status)
+}
+

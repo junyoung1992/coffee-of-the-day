@@ -394,6 +394,270 @@ func TestValidateDateFilter_YYYYMMDDNormalization(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// Status — draft / published 검증 및 전이 규칙
+// ---------------------------------------------------------------------------
+
+func TestCreateLog_DraftCafe_OnlyCafeName_Persists(t *testing.T) {
+	repo := &stubLogRepository{}
+	svc := newTestService(repo)
+
+	got, err := svc.CreateLog(context.Background(), "user-1", CreateLogRequest{
+		RecordedAt: "2026-03-29T09:00:00Z",
+		LogType:    domain.LogTypeCafe,
+		Status:     domain.LogStatusDraft,
+		Cafe: &domain.CafeDetail{
+			CafeName:   "블루보틀",
+			CoffeeName: "",
+		},
+	})
+
+	require.NoError(t, err)
+	require.Len(t, repo.createCalls, 1)
+	saved := repo.createCalls[0]
+	assert.Equal(t, domain.LogStatusDraft, saved.Status)
+	require.NotNil(t, saved.Cafe)
+	assert.Equal(t, "블루보틀", saved.Cafe.CafeName)
+	assert.Empty(t, saved.Cafe.CoffeeName)
+	assert.Equal(t, domain.LogStatusDraft, got.Status)
+}
+
+func TestCreateLog_DraftCafe_BothEmpty_Rejected(t *testing.T) {
+	repo := &stubLogRepository{}
+	svc := newTestService(repo)
+
+	_, err := svc.CreateLog(context.Background(), "user-1", CreateLogRequest{
+		RecordedAt: "2026-03-29T09:00:00Z",
+		LogType:    domain.LogTypeCafe,
+		Status:     domain.LogStatusDraft,
+		Cafe: &domain.CafeDetail{
+			CafeName:   "  ",
+			CoffeeName: "",
+		},
+	})
+
+	require.Error(t, err)
+	var verr *ValidationError
+	require.ErrorAs(t, err, &verr)
+	assert.Equal(t, "cafe", verr.Field)
+	assert.Empty(t, repo.createCalls)
+}
+
+func TestCreateLog_DraftBrew_OnlyBeanName_Persists(t *testing.T) {
+	repo := &stubLogRepository{}
+	svc := newTestService(repo)
+
+	_, err := svc.CreateLog(context.Background(), "user-1", CreateLogRequest{
+		RecordedAt: "2026-03-29T09:00:00Z",
+		LogType:    domain.LogTypeBrew,
+		Status:     domain.LogStatusDraft,
+		Brew: &domain.BrewDetail{
+			BeanName:   "에티오피아 코체레",
+			BrewMethod: "",
+		},
+	})
+
+	require.NoError(t, err)
+	require.Len(t, repo.createCalls, 1)
+	saved := repo.createCalls[0]
+	require.NotNil(t, saved.Brew)
+	assert.Equal(t, "에티오피아 코체레", saved.Brew.BeanName)
+	assert.Equal(t, domain.LogStatusDraft, saved.Status)
+}
+
+func TestCreateLog_DraftBrew_BothEmpty_Rejected(t *testing.T) {
+	repo := &stubLogRepository{}
+	svc := newTestService(repo)
+
+	_, err := svc.CreateLog(context.Background(), "user-1", CreateLogRequest{
+		RecordedAt: "2026-03-29T09:00:00Z",
+		LogType:    domain.LogTypeBrew,
+		Status:     domain.LogStatusDraft,
+		Brew: &domain.BrewDetail{
+			BeanName:   "",
+			BrewMethod: "",
+		},
+	})
+
+	require.Error(t, err)
+	var verr *ValidationError
+	require.ErrorAs(t, err, &verr)
+	assert.Equal(t, "brew", verr.Field)
+}
+
+func TestCreateLog_PublishedDefault_WhenStatusEmpty(t *testing.T) {
+	repo := &stubLogRepository{}
+	svc := newTestService(repo)
+
+	_, err := svc.CreateLog(context.Background(), "user-1", CreateLogRequest{
+		RecordedAt: "2026-03-29T09:00:00Z",
+		LogType:    domain.LogTypeCafe,
+		// Status 미지정 — published로 정규화되어 전체 필수 필드 검증을 받는다.
+		Cafe: &domain.CafeDetail{
+			CafeName:   "블루보틀",
+			CoffeeName: "플랫화이트",
+		},
+	})
+
+	require.NoError(t, err)
+	require.Len(t, repo.createCalls, 1)
+	assert.Equal(t, domain.LogStatusPublished, repo.createCalls[0].Status)
+}
+
+func TestCreateLog_InvalidStatus_Rejected(t *testing.T) {
+	repo := &stubLogRepository{}
+	svc := newTestService(repo)
+
+	_, err := svc.CreateLog(context.Background(), "user-1", CreateLogRequest{
+		RecordedAt: "2026-03-29T09:00:00Z",
+		LogType:    domain.LogTypeCafe,
+		Status:     "archived",
+		Cafe: &domain.CafeDetail{
+			CafeName:   "블루보틀",
+			CoffeeName: "플랫화이트",
+		},
+	})
+
+	require.Error(t, err)
+	var verr *ValidationError
+	require.ErrorAs(t, err, &verr)
+	assert.Equal(t, "status", verr.Field)
+}
+
+func TestUpdateLog_PublishedToDraft_Rejected(t *testing.T) {
+	existing := domain.CoffeeLogFull{
+		CoffeeLog: domain.CoffeeLog{
+			ID:      "log-1",
+			UserID:  "user-1",
+			LogType: domain.LogTypeCafe,
+			Status:  domain.LogStatusPublished,
+		},
+		Cafe: &domain.CafeDetail{CafeName: "기존 카페", CoffeeName: "메뉴"},
+	}
+	repo := &stubLogRepository{
+		getFunc: func(ctx context.Context, logID, userID string) (domain.CoffeeLogFull, error) {
+			return existing, nil
+		},
+	}
+	svc := newTestService(repo)
+
+	_, err := svc.UpdateLog(context.Background(), "user-1", "log-1", UpdateLogRequest{
+		RecordedAt: "2026-03-29T09:00:00Z",
+		Status:     domain.LogStatusDraft,
+		Cafe:       &domain.CafeDetail{CafeName: "새 카페", CoffeeName: "메뉴"},
+	})
+
+	require.Error(t, err)
+	var verr *ValidationError
+	require.ErrorAs(t, err, &verr)
+	assert.Equal(t, "status", verr.Field)
+	assert.Empty(t, repo.updateCalls)
+}
+
+func TestUpdateLog_DraftToPublished_AppliesPublishedValidation(t *testing.T) {
+	existing := domain.CoffeeLogFull{
+		CoffeeLog: domain.CoffeeLog{
+			ID:      "log-1",
+			UserID:  "user-1",
+			LogType: domain.LogTypeCafe,
+			Status:  domain.LogStatusDraft,
+		},
+		Cafe: &domain.CafeDetail{CafeName: "초안 카페"},
+	}
+	repo := &stubLogRepository{
+		getFunc: func(ctx context.Context, logID, userID string) (domain.CoffeeLogFull, error) {
+			return existing, nil
+		},
+	}
+	svc := newTestService(repo)
+
+	// coffee_name이 비어있으면 published 검증에 실패해야 한다.
+	_, err := svc.UpdateLog(context.Background(), "user-1", "log-1", UpdateLogRequest{
+		RecordedAt: "2026-03-29T09:00:00Z",
+		Status:     domain.LogStatusPublished,
+		Cafe:       &domain.CafeDetail{CafeName: "초안 카페", CoffeeName: ""},
+	})
+
+	require.Error(t, err)
+	var verr *ValidationError
+	require.ErrorAs(t, err, &verr)
+	assert.Equal(t, "cafe.coffee_name", verr.Field)
+}
+
+func TestUpdateLog_StatusEmpty_KeepsExistingStatus(t *testing.T) {
+	existing := domain.CoffeeLogFull{
+		CoffeeLog: domain.CoffeeLog{
+			ID:      "log-1",
+			UserID:  "user-1",
+			LogType: domain.LogTypeCafe,
+			Status:  domain.LogStatusDraft,
+		},
+		Cafe: &domain.CafeDetail{CafeName: "초안"},
+	}
+	repo := &stubLogRepository{
+		getFunc: func(ctx context.Context, logID, userID string) (domain.CoffeeLogFull, error) {
+			return existing, nil
+		},
+	}
+	svc := newTestService(repo)
+
+	got, err := svc.UpdateLog(context.Background(), "user-1", "log-1", UpdateLogRequest{
+		RecordedAt: "2026-03-29T09:00:00Z",
+		// Status 미지정 — 기존 draft 유지, draft 검증 적용.
+		Cafe: &domain.CafeDetail{CafeName: "초안 갱신", CoffeeName: ""},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, domain.LogStatusDraft, got.Status)
+	require.Len(t, repo.updateCalls, 1)
+	assert.Equal(t, domain.LogStatusDraft, repo.updateCalls[0].Status)
+}
+
+func TestListLogs_StatusFilter_ValidatesAndForwards(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *string
+		wantSent string
+		wantErr  bool
+	}{
+		{name: "nil → published", input: nil, wantSent: "published"},
+		{name: "empty → published", input: strPtr(""), wantSent: "published"},
+		{name: "draft", input: strPtr("draft"), wantSent: "draft"},
+		{name: "all", input: strPtr("all"), wantSent: "all"},
+		{name: "invalid", input: strPtr("archived"), wantErr: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var capturedFilter repository.ListFilter
+			repo := &stubLogRepository{
+				listFunc: func(ctx context.Context, userID string, filter repository.ListFilter) ([]domain.CoffeeLogFull, error) {
+					capturedFilter = filter
+					return nil, nil
+				},
+			}
+			svc := newTestService(repo)
+
+			_, err := svc.ListLogs(context.Background(), "user-1", ListLogsFilter{
+				Status: tc.input,
+				Limit:  10,
+			})
+
+			if tc.wantErr {
+				require.Error(t, err)
+				var verr *ValidationError
+				require.ErrorAs(t, err, &verr)
+				assert.Equal(t, "status", verr.Field)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, capturedFilter.Status)
+			assert.Equal(t, tc.wantSent, *capturedFilter.Status)
+		})
+	}
+}
+
 func TestListLogs_DateFilterNormalizesYYYYMMDD(t *testing.T) {
 	var capturedFilter repository.ListFilter
 	repo := &stubLogRepository{
