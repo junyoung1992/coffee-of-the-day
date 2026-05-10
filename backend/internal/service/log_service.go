@@ -399,17 +399,14 @@ func normalizeDetailsForStatus(logType domain.LogType, status domain.LogStatus, 
 
 func normalizeListFilter(filter ListLogsFilter) (repository.ListFilter, int, error) {
 	limit := filter.Limit
-	if limit == 0 {
-		limit = defaultListLimit
-	}
 	if limit < 0 {
 		return repository.ListFilter{}, 0, newValidationError("limit", "0 이상이어야 합니다")
 	}
+	if limit == 0 {
+		limit = defaultListLimit
+	}
 	if limit > maxListLimit {
 		return repository.ListFilter{}, 0, newValidationError("limit", fmt.Sprintf("%d 이하여야 합니다", maxListLimit))
-	}
-	if limit == 0 {
-		return repository.ListFilter{}, 0, newValidationError("limit", "0보다 커야 합니다")
 	}
 
 	var (

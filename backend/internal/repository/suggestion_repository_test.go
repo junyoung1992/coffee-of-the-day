@@ -34,9 +34,9 @@ func TestGetTagSuggestions_PrefixMatch(t *testing.T) {
 
 	// user-1의 cafe 로그에 다양한 tasting_tags를 삽입한다.
 	_, err := db.Exec(
-		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"log-1", testUserID, now, "[]", "cafe", now, now,
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-1", testUserID, now, "[]", "cafe", "published", now, now,
 	)
 	require.NoError(t, err)
 	_, err = db.Exec(
@@ -59,9 +59,9 @@ func TestGetTagSuggestions_CaseInsensitive(t *testing.T) {
 	now := "2026-01-01T00:00:00Z"
 
 	_, err := db.Exec(
-		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"log-1", testUserID, now, "[]", "cafe", now, now,
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-1", testUserID, now, "[]", "cafe", "published", now, now,
 	)
 	require.NoError(t, err)
 	_, err = db.Exec(
@@ -84,9 +84,9 @@ func TestGetTagSuggestions_EmptyQ_ReturnsAll(t *testing.T) {
 	now := "2026-01-01T00:00:00Z"
 
 	_, err := db.Exec(
-		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"log-1", testUserID, now, "[]", "cafe", now, now,
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-1", testUserID, now, "[]", "cafe", "published", now, now,
 	)
 	require.NoError(t, err)
 	_, err = db.Exec(
@@ -112,9 +112,9 @@ func TestGetTagSuggestions_FrequencyOrder(t *testing.T) {
 	for i, tags := range []string{`["체리", "초콜릿"]`, `["체리"]`} {
 		logID := "log-" + string(rune('1'+i))
 		_, err := db.Exec(
-			`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, created_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			logID, testUserID, now, "[]", "cafe", now, now,
+			`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			logID, testUserID, now, "[]", "cafe", "published", now, now,
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
@@ -140,9 +140,9 @@ func TestGetTagSuggestions_OtherUserData_NotReturned(t *testing.T) {
 
 	// otherUserID의 로그에만 태그를 삽입한다.
 	_, err := db.Exec(
-		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"log-other", otherUserID, now, "[]", "cafe", now, now,
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-other", otherUserID, now, "[]", "cafe", "published", now, now,
 	)
 	require.NoError(t, err)
 	_, err = db.Exec(
@@ -166,9 +166,9 @@ func TestGetTagSuggestions_BrewLog_Included(t *testing.T) {
 
 	// brew 타입 로그에 태그를 삽입한다.
 	_, err := db.Exec(
-		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"log-brew", testUserID, now, "[]", "brew", now, now,
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-brew", testUserID, now, "[]", "brew", "published", now, now,
 	)
 	require.NoError(t, err)
 	_, err = db.Exec(
@@ -195,9 +195,9 @@ func TestGetCompanionSuggestions_PrefixMatch(t *testing.T) {
 	now := "2026-01-01T00:00:00Z"
 
 	_, err := db.Exec(
-		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"log-1", testUserID, now, `["지수", "지훈", "민준"]`, "cafe", now, now,
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-1", testUserID, now, `["지수", "지훈", "민준"]`, "cafe", "published", now, now,
 	)
 	require.NoError(t, err)
 	_, err = db.Exec(
@@ -221,9 +221,9 @@ func TestGetCompanionSuggestions_EmptyQ_ReturnsAll(t *testing.T) {
 	now := "2026-01-01T00:00:00Z"
 
 	_, err := db.Exec(
-		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"log-1", testUserID, now, `["지수", "민준"]`, "cafe", now, now,
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-1", testUserID, now, `["지수", "민준"]`, "cafe", "published", now, now,
 	)
 	require.NoError(t, err)
 	_, err = db.Exec(
@@ -244,9 +244,9 @@ func TestGetCompanionSuggestions_OtherUserData_NotReturned(t *testing.T) {
 	now := "2026-01-01T00:00:00Z"
 
 	_, err := db.Exec(
-		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		"log-other", otherUserID, now, `["지수"]`, "cafe", now, now,
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-other", otherUserID, now, `["지수"]`, "cafe", "published", now, now,
 	)
 	require.NoError(t, err)
 	_, err = db.Exec(
