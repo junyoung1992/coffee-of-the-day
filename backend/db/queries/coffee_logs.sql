@@ -1,14 +1,14 @@
 -- name: InsertLog :exec
-INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at, status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetLogByID :one
-SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at
+SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at, status
 FROM coffee_logs
 WHERE id = ? AND user_id = ?;
 
 -- name: ListLogs :many
-SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at
+SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at, status
 FROM coffee_logs
 WHERE user_id = ?
   AND (sqlc.narg('log_type') IS NULL OR log_type = sqlc.narg('log_type'))
@@ -24,7 +24,7 @@ LIMIT ?;
 
 -- name: UpdateLog :exec
 UPDATE coffee_logs
-SET recorded_at = ?, companions = ?, memo = ?, updated_at = ?
+SET recorded_at = ?, companions = ?, memo = ?, updated_at = ?, status = ?
 WHERE id = ? AND user_id = ?;
 
 -- name: DeleteLog :exec

@@ -16,10 +16,15 @@ import (
 var ErrNotFound = errors.New("log not found")
 
 // ListFilter holds optional filters for listing coffee logs.
+//
+// Status semantics: nil 또는 "published"는 발행된 로그만, "draft"는 작성 중 로그만,
+// "all"은 양쪽 모두를 반환한다. 기본값을 published로 두는 것은 통계/자동완성 등
+// 기존 호출 지점이 변경 없이 동작하도록 보장하기 위한 방어적 설계다.
 type ListFilter struct {
 	LogType  *string
 	DateFrom *string
 	DateTo   *string
+	Status   *string
 	Cursor   *Cursor
 	Limit    int
 }
@@ -62,6 +67,7 @@ func (r *SQLiteLogRepository) CreateLog(ctx context.Context, log domain.CoffeeLo
 		RecordedAt: log.RecordedAt,
 		Companions: domain.StringsToJSON(log.Companions),
 		LogType:    string(log.LogType),
+		Status:     string(log.Status),
 		Memo:       log.Memo,
 		CreatedAt:  log.CreatedAt,
 		UpdatedAt:  log.UpdatedAt,
@@ -139,9 +145,18 @@ func (r *SQLiteLogRepository) GetLogByID(ctx context.Context, logID, userID stri
 }
 
 func (r *SQLiteLogRepository) ListLogs(ctx context.Context, userID string, filter ListFilter) ([]domain.CoffeeLogFull, error) {
-	query := `SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at
+	query := `SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at, status
 		FROM coffee_logs WHERE user_id = ?`
 	args := []any{userID}
+
+	// status 필터: nil 또는 "published"는 발행된 로그만, "draft"는 드래프트만,
+	// "all"은 조건 추가 없음. 정규화는 service 레이어에서 수행되므로 여기서는
+	// 들어온 값을 신뢰한다.
+	if filter.Status == nil || *filter.Status == "published" {
+		query += ` AND status = 'published'`
+	} else if *filter.Status == "draft" {
+		query += ` AND status = 'draft'`
+	}
 
 	if filter.LogType != nil {
 		query += ` AND log_type = ?`
@@ -174,12 +189,13 @@ func (r *SQLiteLogRepository) ListLogs(ctx context.Context, userID string, filte
 	var items []domain.CoffeeLogFull
 	for rows.Next() {
 		var f domain.CoffeeLogFull
-		var companions, logType string
-		if err := rows.Scan(&f.ID, &f.UserID, &f.RecordedAt, &companions, &logType, &f.Memo, &f.CreatedAt, &f.UpdatedAt); err != nil {
+		var companions, logType, status string
+		if err := rows.Scan(&f.ID, &f.UserID, &f.RecordedAt, &companions, &logType, &f.Memo, &f.CreatedAt, &f.UpdatedAt, &status); err != nil {
 			return nil, fmt.Errorf("list logs: scan: %w", err)
 		}
 		f.Companions = domain.JSONToStrings(companions)
 		f.LogType = domain.LogType(logType)
+		f.Status = domain.LogStatus(status)
 		items = append(items, f)
 	}
 	if err := rows.Err(); err != nil {
@@ -242,6 +258,7 @@ func (r *SQLiteLogRepository) UpdateLog(ctx context.Context, log domain.CoffeeLo
 	err = qtx.UpdateLog(ctx, db.UpdateLogParams{
 		RecordedAt: log.RecordedAt,
 		Companions: domain.StringsToJSON(log.Companions),
+		Status:     string(log.Status),
 		Memo:       log.Memo,
 		UpdatedAt:  log.UpdatedAt,
 		ID:         log.ID,
@@ -480,6 +497,7 @@ func coffeeLogToFull(row db.CoffeeLog) domain.CoffeeLogFull {
 			RecordedAt: row.RecordedAt,
 			Companions: domain.JSONToStrings(row.Companions),
 			LogType:    domain.LogType(row.LogType),
+			Status:     domain.LogStatus(row.Status),
 			Memo:       row.Memo,
 			CreatedAt:  row.CreatedAt,
 			UpdatedAt:  row.UpdatedAt,

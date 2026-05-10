@@ -5,19 +5,20 @@
 -- [GetTagSuggestions]
 -- cafe_logs와 brew_logs 양쪽의 tasting_tags를 통합하여 빈도순으로 반환한다.
 -- json_each()로 JSON 배열을 행으로 펼쳐 GROUP BY로 집계한다.
+-- draft 로그는 사용자가 의도하지 않은 임시 입력값일 수 있으므로 자동완성에서 제외한다.
 --
 -- WITH all_tags AS (
 --     SELECT j.value AS tag
 --     FROM cafe_logs cl
 --     JOIN coffee_logs l ON l.id = cl.log_id
 --     JOIN json_each(cl.tasting_tags) j
---     WHERE l.user_id = :user_id
+--     WHERE l.user_id = :user_id AND l.status = 'published'
 --     UNION ALL
 --     SELECT j.value AS tag
 --     FROM brew_logs bl
 --     JOIN coffee_logs l ON l.id = bl.log_id
 --     JOIN json_each(bl.tasting_tags) j
---     WHERE l.user_id = :user_id
+--     WHERE l.user_id = :user_id AND l.status = 'published'
 -- )
 -- SELECT tag, COUNT(*) AS cnt
 -- FROM all_tags
@@ -28,11 +29,13 @@
 
 -- [GetCompanionSuggestions]
 -- coffee_logs의 companions JSON 배열을 집계하여 빈도순으로 반환한다.
+-- draft 로그는 자동완성에서 제외한다.
 --
 -- SELECT j.value AS companion, COUNT(*) AS cnt
 -- FROM coffee_logs l
 -- JOIN json_each(l.companions) j
 -- WHERE l.user_id = :user_id
+--   AND l.status = 'published'
 --   AND (:q = '' OR LOWER(j.value) LIKE '%' || LOWER(:q) || '%')
 -- GROUP BY companion
 -- ORDER BY cnt DESC, companion ASC

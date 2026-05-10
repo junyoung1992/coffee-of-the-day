@@ -1,4 +1,4 @@
-import type { BrewLogFull, CoffeeLogFull, CreateLogInput } from '../types/log'
+import type { BrewLogFull, CoffeeLogFull, CreateLogInput, LogStatus } from '../types/log'
 import type { PresetFull } from '../types/preset'
 
 export type FormLogType = 'cafe' | 'brew'
@@ -15,6 +15,7 @@ export type BrewMethodValue =
 
 export interface LogFormState {
   logType: FormLogType
+  status: LogStatus
   recordedAt: string
   companions: string[]
   memo: string
@@ -119,6 +120,9 @@ function normalizeNumber(value: string) {
 export function createEmptyFormState(now = new Date()): LogFormState {
   return {
     logType: 'cafe',
+    // 신규 폼은 발행 의도로 시작한다. 사용자가 "임시 저장"을 누를 때만
+    // buildLogPayload(state, { status: 'draft' })로 override된다.
+    status: 'published',
     recordedAt: toDateTimeLocal(now),
     companions: [],
     memo: '',
@@ -161,6 +165,7 @@ export function logToFormState(log: CoffeeLogFull): LogFormState {
   const state: LogFormState = {
     ...base,
     logType: log.log_type,
+    status: log.status,
     recordedAt: fromRecordedAt(log.recorded_at),
     companions: log.companions ?? [],
     memo: log.memo ?? '',
@@ -214,7 +219,8 @@ export function logToFormState(log: CoffeeLogFull): LogFormState {
 export function cloneToFormState(log: CoffeeLogFull, now = new Date()): LogFormState {
   const state = logToFormState(log)
 
-  // 리셋 대상 필드
+  // 리셋 대상 필드 — 복제는 새 published 로그 작성을 의도한다.
+  state.status = 'published'
   state.recordedAt = toDateTimeLocal(now)
   state.companions = []
   state.memo = ''
@@ -293,11 +299,24 @@ export function presetToFormState(preset: PresetFull, now = new Date()): LogForm
   return state
 }
 
-export function buildLogPayload(state: LogFormState): CreateLogInput {
+export interface BuildLogPayloadOptions {
+  /**
+   * 저장 의도. 호출자가 명시한다(저장 버튼별로 결정).
+   * draft는 cafe_name/coffee_name이나 bean_name/brew_method가 한쪽만 채워져도 통과,
+   * published는 기존 필수 필드 검증을 그대로 적용받는다.
+   */
+  status: LogStatus
+}
+
+export function buildLogPayload(
+  state: LogFormState,
+  options: BuildLogPayloadOptions,
+): CreateLogInput {
   const payload: CreateLogInput = {
     recorded_at: toApiRecordedAt(state.recordedAt),
     companions: state.companions,
     log_type: state.logType,
+    status: options.status,
   }
 
   const memo = normalizeText(state.memo)
@@ -306,6 +325,10 @@ export function buildLogPayload(state: LogFormState): CreateLogInput {
   }
 
   if (state.logType === 'cafe') {
+    // 필수 식별 필드(cafe_name, coffee_name)는 status와 무관하게 trim한 원문을
+    // 그대로 보낸다. draft는 둘 다 빈 문자열이어도 백엔드 draft validator가
+    // "둘 중 하나는 필수" 규칙을 적용하고, published는 동일 필드를 필수 검증한다.
+    // 옵셔널 필드는 아래에서 normalizeText로 빈 값을 undefined로 정규화한다.
     payload.cafe = {
       cafe_name: state.cafe.cafeName.trim(),
       coffee_name: state.cafe.coffeeName.trim(),
@@ -367,6 +390,24 @@ export function buildLogPayload(state: LogFormState): CreateLogInput {
   }
 
   return payload
+}
+
+/**
+ * 드래프트(임시 저장)의 최소 조건을 만족하는지 검사한다.
+ * - cafe: cafe_name 또는 coffee_name 중 하나가 비어있지 않아야 함
+ * - brew: bean_name 또는 brew_method 중 하나가 채워져 있어야 함
+ *
+ * brewMethod는 createEmptyFormState에서 'pour_over' 기본값이므로 brew 폼은
+ * 사실상 항상 true가 되지만, 사용자가 명시적으로 비웠을 가능성에 대비해 검사한다.
+ */
+export function canSaveAsDraft(state: LogFormState): boolean {
+  if (state.logType === 'cafe') {
+    return state.cafe.cafeName.trim() !== '' || state.cafe.coffeeName.trim() !== ''
+  }
+  // BrewMethodValue 타입상 brewMethod는 항상 enum 값 중 하나로 채워져 있으므로
+  // 두 번째 조건은 사실상 항상 true다. 사용자가 의도적으로 brewMethod만 선택한
+  // 케이스를 허용하기 위해 비교는 그대로 유지한다(plan.md의 알려진 한계 참고).
+  return state.brew.beanName.trim() !== '' || Boolean(state.brew.brewMethod)
 }
 
 /**

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { buildLogPayload, cloneToFormState, createEmptyFormState, hasOptionalValues, logToFormState, presetToFormState, recipeToFormState } from './logFormState'
+import {
+  buildLogPayload,
+  canSaveAsDraft,
+  cloneToFormState,
+  createEmptyFormState,
+  hasOptionalValues,
+  logToFormState,
+  presetToFormState,
+  recipeToFormState,
+} from './logFormState'
 import type { CafeLogFull, BrewLogFull, CoffeeLogFull } from '../types/log'
 import type { CafePresetFull, BrewPresetFull } from '../types/preset'
 
@@ -26,9 +35,10 @@ describe('buildLogPayload', () => {
     state.cafe.tastingTags = ['초콜릿', '자몽']
     state.cafe.rating = '4.5'
 
-    const payload = buildLogPayload(state)
+    const payload = buildLogPayload(state, { status: 'published' })
 
     expect(payload.log_type).toBe('cafe')
+    expect(payload.status).toBe('published')
     expect(payload.companions).toEqual(['민수', '지연'])
     expect(payload.memo).toBe('주말 기록')
     expect(payload.cafe).toMatchObject({
@@ -53,7 +63,7 @@ describe('buildLogPayload', () => {
     state.brew.brewTimeSec = '140'
     state.brew.rating = '5'
 
-    const payload = buildLogPayload(state)
+    const payload = buildLogPayload(state, { status: 'published' })
 
     expect(payload.brew).toMatchObject({
       bean_name: '에티오피아 예가체프',
@@ -67,6 +77,67 @@ describe('buildLogPayload', () => {
     })
     expect(payload).not.toHaveProperty('cafe')
   })
+
+  it('status 옵션을 그대로 페이로드에 반영한다', () => {
+    const state = createEmptyFormState(new Date('2026-03-29T10:15:00Z'))
+    state.cafe.cafeName = '블루보틀'
+    state.cafe.coffeeName = '플랫화이트'
+
+    const draftPayload = buildLogPayload(state, { status: 'draft' })
+    const publishedPayload = buildLogPayload(state, { status: 'published' })
+
+    expect(draftPayload.status).toBe('draft')
+    expect(publishedPayload.status).toBe('published')
+  })
+
+  it('draft 모드에서도 빈 cafe 필드를 그대로 전송한다(백엔드가 검증)', () => {
+    const state = createEmptyFormState(new Date('2026-03-29T10:15:00Z'))
+    state.cafe.cafeName = '블루보틀'
+    // coffee_name은 비워둔다 — draft에서는 허용된다.
+
+    const payload = buildLogPayload(state, { status: 'draft' })
+
+    expect(payload.cafe?.cafe_name).toBe('블루보틀')
+    expect(payload.cafe?.coffee_name).toBe('')
+  })
+})
+
+describe('createEmptyFormState status', () => {
+  it('기본 status는 published다', () => {
+    expect(createEmptyFormState().status).toBe('published')
+  })
+})
+
+describe('canSaveAsDraft', () => {
+  it('빈 cafe 폼에서는 false를 반환한다', () => {
+    const state = createEmptyFormState()
+    expect(canSaveAsDraft(state)).toBe(false)
+  })
+
+  it('cafe_name이 채워지면 true를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.cafe.cafeName = '블루보틀'
+    expect(canSaveAsDraft(state)).toBe(true)
+  })
+
+  it('coffee_name만 채워져도 true를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.cafe.coffeeName = '플랫화이트'
+    expect(canSaveAsDraft(state)).toBe(true)
+  })
+
+  it('brew 폼은 brewMethod 기본값(pour_over) 덕에 항상 true다', () => {
+    const state = createEmptyFormState()
+    state.logType = 'brew'
+    expect(canSaveAsDraft(state)).toBe(true)
+  })
+
+  it('brew 폼에서 bean_name이 채워지면 true를 반환한다', () => {
+    const state = createEmptyFormState()
+    state.logType = 'brew'
+    state.brew.beanName = '케냐 AA'
+    expect(canSaveAsDraft(state)).toBe(true)
+  })
 })
 
 describe('logToFormState', () => {
@@ -77,6 +148,7 @@ describe('logToFormState', () => {
       recorded_at: '2026-03-29T10:00:00Z',
       companions: ['민수', '지연'],
       log_type: 'brew',
+      status: 'published',
       memo: '같이 비교 시음',
       created_at: '2026-03-29T10:00:00Z',
       updated_at: '2026-03-29T10:00:00Z',
@@ -104,12 +176,35 @@ describe('logToFormState', () => {
     const state = logToFormState(log)
 
     expect(state.logType).toBe('brew')
+    expect(state.status).toBe('published')
     expect(state.companions).toEqual(['민수', '지연'])
     expect(state.memo).toBe('같이 비교 시음')
     expect(state.brew.beanName).toBe('케냐 AB')
     expect(state.brew.tastingTags).toEqual(['베리', '홍차'])
     expect(state.brew.brewSteps).toEqual(['뜸 40초', '3회 나눠 붓기'])
     expect(state.brew.rating).toBe('4.5')
+  })
+
+  it('draft 응답의 status를 폼 상태에 그대로 매핑한다', () => {
+    const log: CoffeeLogFull = {
+      id: 'log-2',
+      user_id: 'user-1',
+      recorded_at: '2026-03-29T10:00:00Z',
+      companions: [],
+      log_type: 'cafe',
+      status: 'draft',
+      created_at: '2026-03-29T10:00:00Z',
+      updated_at: '2026-03-29T10:00:00Z',
+      cafe: {
+        cafe_name: '블루보틀',
+        coffee_name: '',
+        tasting_tags: [],
+      },
+    }
+
+    const state = logToFormState(log)
+
+    expect(state.status).toBe('draft')
   })
 })
 

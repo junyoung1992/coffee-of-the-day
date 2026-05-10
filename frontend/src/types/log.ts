@@ -8,6 +8,7 @@ import type { components } from './schema'
 // schema.ts의 경로 표현(components['schemas']['...'])을 짧게 재수출한다.
 
 export type LogType = components['schemas']['LogType']
+export type LogStatus = components['schemas']['LogStatus']
 export type RoastLevel = components['schemas']['RoastLevel']
 export type BrewMethod = components['schemas']['BrewMethod']
 export type CafeDetail = components['schemas']['CafeDetail']

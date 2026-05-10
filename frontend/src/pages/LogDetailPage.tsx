@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RatingDisplay } from '../components/RatingDisplay'
@@ -72,6 +72,14 @@ export default function LogDetailPage() {
   const createPresetMutation = useCreatePreset()
   const { data: log, error, isError, isLoading } = useLog(id ?? '')
   const brewSteps = log?.log_type === 'brew' ? log.brew.brew_steps ?? [] : []
+
+  // 드래프트는 상세 화면에서 보여줄 의미 있는 정보가 적으므로 곧바로 수정 폼으로 보낸다.
+  // replace: true로 history에 남기지 않아 뒤로가기 시 무한 루프를 막는다.
+  useEffect(() => {
+    if (log?.status === 'draft' && id) {
+      navigate(`/logs/${id}/edit`, { replace: true })
+    }
+  }, [log?.status, id, navigate])
 
   const [showPresetInput, setShowPresetInput] = useState(false)
   const [presetName, setPresetName] = useState('')
@@ -148,7 +156,9 @@ export default function LogDetailPage() {
         </div>
       ) : null}
 
-      {log ? (
+      {/* 드래프트는 useEffect에서 /edit으로 redirect되므로 한 프레임 깜빡임을
+          막기 위해 published만 상세 컨텐츠를 렌더한다. */}
+      {log && log.status !== 'draft' ? (
         <div className="space-y-6">
           <section className="rounded-[1.75rem] border border-amber-950/10 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(248,240,229,0.9))] p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

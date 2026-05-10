@@ -54,6 +54,7 @@ type coffeeLogResponse struct {
 	RecordedAt string          `json:"recorded_at"`
 	Companions []string        `json:"companions"`
 	LogType    string          `json:"log_type"`
+	Status     string          `json:"status"`
 	Memo       *string         `json:"memo,omitempty"`
 	CreatedAt  string          `json:"created_at"`
 	UpdatedAt  string          `json:"updated_at"`
@@ -65,6 +66,7 @@ type createLogRequest struct {
 	RecordedAt string          `json:"recorded_at"`
 	Companions []string        `json:"companions"`
 	LogType    string          `json:"log_type"`
+	Status     *string         `json:"status"`
 	Memo       *string         `json:"memo"`
 	Cafe       *cafeDetailJSON `json:"cafe"`
 	Brew       *brewDetailJSON `json:"brew"`
@@ -74,6 +76,7 @@ type updateLogRequest struct {
 	RecordedAt string          `json:"recorded_at"`
 	Companions []string        `json:"companions"`
 	LogType    string          `json:"log_type"`
+	Status     *string         `json:"status"`
 	Memo       *string         `json:"memo"`
 	Cafe       *cafeDetailJSON `json:"cafe"`
 	Brew       *brewDetailJSON `json:"brew"`
@@ -119,6 +122,7 @@ func (h *LogHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 		RecordedAt: req.RecordedAt,
 		Companions: req.Companions,
 		LogType:    domain.LogType(req.LogType),
+		Status:     statusFromPtr(req.Status),
 		Memo:       req.Memo,
 		Cafe:       cafeJSONToDomain(req.Cafe),
 		Brew:       brewJSONToDomain(req.Brew),
@@ -150,6 +154,10 @@ func (h *LogHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	if c := q.Get("cursor"); c != "" {
 		filter.Cursor = &c
+	}
+	// status 쿼리스트링은 service 레이어에서 검증한다(빈 값이면 published 기본).
+	if s := q.Get("status"); s != "" {
+		filter.Status = &s
 	}
 	if ls := q.Get("limit"); ls != "" {
 		n, err := strconv.Atoi(ls)
@@ -210,6 +218,7 @@ func (h *LogHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 		RecordedAt: req.RecordedAt,
 		Companions: req.Companions,
 		LogType:    domain.LogType(req.LogType),
+		Status:     statusFromPtr(req.Status),
 		Memo:       req.Memo,
 		Cafe:       cafeJSONToDomain(req.Cafe),
 		Brew:       brewJSONToDomain(req.Brew),
@@ -264,6 +273,15 @@ func writeServiceError(w http.ResponseWriter, err error) {
 
 // --- 도메인 ↔ JSON 변환 ---
 
+// statusFromPtr는 요청 JSON의 *string status를 service 레이어가 기대하는
+// domain.LogStatus(빈 값 = 미지정)로 변환한다.
+func statusFromPtr(s *string) domain.LogStatus {
+	if s == nil {
+		return ""
+	}
+	return domain.LogStatus(*s)
+}
+
 func logToResponse(log domain.CoffeeLogFull) coffeeLogResponse {
 	resp := coffeeLogResponse{
 		ID:         log.ID,
@@ -271,6 +289,7 @@ func logToResponse(log domain.CoffeeLogFull) coffeeLogResponse {
 		RecordedAt: log.RecordedAt,
 		Companions: log.Companions,
 		LogType:    string(log.LogType),
+		Status:     string(log.Status),
 		Memo:       log.Memo,
 		CreatedAt:  log.CreatedAt,
 		UpdatedAt:  log.UpdatedAt,

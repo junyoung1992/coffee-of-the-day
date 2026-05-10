@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Coffee of the Day API
   description: 커피 기록(카페 방문 / 홈브루) CRUD API
-  version: 0.2.0
+  version: 0.3.0
 
 servers:
   - url: http://localhost:8080
@@ -157,6 +157,15 @@ paths:
             maximum: 100
             default: 20
           description: 페이지당 항목 수
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published, all]
+            default: published
+          description: |
+            목록 필터. 기본값 published(완성된 로그만).
+            draft는 작성 중인 로그, all은 전체.
       responses:
         '200':
           description: 조회 성공
@@ -472,6 +481,13 @@ components:
       enum: [cafe, brew]
       description: cafe = 바리스타가 추출, brew = 내가 직접 추출
 
+    LogStatus:
+      type: string
+      enum: [draft, published]
+      description: |
+        draft = 작성 중 임시 저장 상태 (필수 필드 일부만 채워도 저장 가능,
+        통계/자동완성에서 제외됨). published = 정식 발행 상태. 기본값은 published.
+
     RoastLevel:
       type: string
       enum: [light, medium, dark]
@@ -586,7 +602,7 @@ components:
 
     CoffeeLogResponse:
       type: object
-      required: [id, user_id, recorded_at, companions, log_type, created_at, updated_at]
+      required: [id, user_id, recorded_at, companions, log_type, status, created_at, updated_at]
       properties:
         id:
           type: string
@@ -601,6 +617,8 @@ components:
             type: string
         log_type:
           $ref: '#/components/schemas/LogType'
+        status:
+          $ref: '#/components/schemas/LogStatus'
         memo:
           type: string
           nullable: true
@@ -629,6 +647,8 @@ components:
             type: string
         log_type:
           $ref: '#/components/schemas/LogType'
+        status:
+          $ref: '#/components/schemas/LogStatus'
         memo:
           type: string
           nullable: true
@@ -652,6 +672,8 @@ components:
             type: string
         log_type:
           $ref: '#/components/schemas/LogType'
+        status:
+          $ref: '#/components/schemas/LogStatus'
         memo:
           type: string
           nullable: true

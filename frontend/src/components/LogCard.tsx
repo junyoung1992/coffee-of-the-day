@@ -73,27 +73,47 @@ export function LogCardSkeleton() {
 
 export function LogCard({ log }: { log: CoffeeLogFull }) {
   const navigate = useNavigate()
-  const title = log.log_type === 'cafe' ? log.cafe.coffee_name : log.brew.bean_name
+  const isDraft = log.status === 'draft'
+
+  // 드래프트 카드는 필수 필드가 비어있을 수 있다. fallback 텍스트로 자리를 메워
+  // "메뉴 미작성" 같은 명시적 표시를 통해 사용자에게 미완성 상태를 인지시킨다.
+  const rawTitle = log.log_type === 'cafe' ? log.cafe.coffee_name : log.brew.bean_name
+  const title = rawTitle || (log.log_type === 'cafe' ? '메뉴 미작성' : '원두 미작성')
   const subtitle =
     log.log_type === 'cafe'
-      ? `${log.cafe.cafe_name}${log.cafe.location ? ` · ${log.cafe.location}` : ''}`
-      : `${BREW_METHOD_LABELS[log.brew.brew_method]}${log.brew.brew_device ? ` · ${log.brew.brew_device}` : ''}`
+      ? `${log.cafe.cafe_name || '카페 미작성'}${log.cafe.location ? ` · ${log.cafe.location}` : ''}`
+      : log.brew.brew_method
+        ? `${BREW_METHOD_LABELS[log.brew.brew_method]}${log.brew.brew_device ? ` · ${log.brew.brew_device}` : ''}`
+        : '추출 방식 미작성'
 
   const tags =
     log.log_type === 'cafe' ? log.cafe.tasting_tags ?? [] : log.brew.tasting_tags ?? []
   const rating = log.log_type === 'cafe' ? log.cafe.rating : log.brew.rating
   const note = log.log_type === 'cafe' ? log.cafe.impressions : log.brew.impressions
 
+  // 드래프트는 클릭 시 곧바로 수정 폼으로 이동한다. 상세 페이지는 미완성 상태에
+  // 보여줄 의미 있는 정보가 적기 때문에 별도 디자인 비용을 들이지 않는다.
+  const linkTo = isDraft ? `/logs/${log.id}/edit` : `/logs/${log.id}`
+
+  // 드래프트 카드는 점선 테두리로 미완성 상태를 시각화한다.
+  const containerClass = `group flex h-full flex-col justify-between rounded-[1.75rem] border ${
+    isDraft ? 'border-dashed border-amber-900/30' : 'border-amber-950/10'
+  } bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,239,229,0.9))] p-5 shadow-[0_16px_50px_rgba(72,44,17,0.08)] transition hover:-translate-y-0.5 hover:border-amber-900/20 hover:shadow-[0_24px_70px_rgba(72,44,17,0.16)]`
+
   return (
-    <Link
-      to={`/logs/${log.id}`}
-      className="group flex h-full flex-col justify-between rounded-[1.75rem] border border-amber-950/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,239,229,0.9))] p-5 shadow-[0_16px_50px_rgba(72,44,17,0.08)] transition hover:-translate-y-0.5 hover:border-amber-900/20 hover:shadow-[0_24px_70px_rgba(72,44,17,0.16)]"
-    >
+    <Link to={linkTo} className={containerClass}>
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-2">
-            <div className="inline-flex rounded-full border border-amber-900/15 bg-amber-100/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-amber-950/70">
-              {log.log_type}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-full border border-amber-900/15 bg-amber-100/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-amber-950/70">
+                {log.log_type}
+              </div>
+              {isDraft ? (
+                <div className="inline-flex rounded-full border border-amber-900/30 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-950">
+                  작성 중
+                </div>
+              ) : null}
             </div>
             <div>
               <h2 className="text-xl font-semibold tracking-tight text-stone-950">{title}</h2>
@@ -150,7 +170,9 @@ export function LogCard({ log }: { log: CoffeeLogFull }) {
         >
           복제
         </button>
-        <span className="transition group-hover:translate-x-1">View log</span>
+        <span className="transition group-hover:translate-x-1">
+          {isDraft ? '이어서 작성' : 'View log'}
+        </span>
       </div>
     </Link>
   )

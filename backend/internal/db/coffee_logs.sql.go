@@ -25,7 +25,7 @@ func (q *Queries) DeleteLog(ctx context.Context, arg DeleteLogParams) error {
 }
 
 const getLogByID = `-- name: GetLogByID :one
-SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at
+SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at, status
 FROM coffee_logs
 WHERE id = ? AND user_id = ?
 `
@@ -47,13 +47,14 @@ func (q *Queries) GetLogByID(ctx context.Context, arg GetLogByIDParams) (CoffeeL
 		&i.Memo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
 	)
 	return i, err
 }
 
 const insertLog = `-- name: InsertLog :exec
-INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at, status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertLogParams struct {
@@ -65,6 +66,7 @@ type InsertLogParams struct {
 	Memo       *string `json:"memo"`
 	CreatedAt  string  `json:"created_at"`
 	UpdatedAt  string  `json:"updated_at"`
+	Status     string  `json:"status"`
 }
 
 func (q *Queries) InsertLog(ctx context.Context, arg InsertLogParams) error {
@@ -77,12 +79,13 @@ func (q *Queries) InsertLog(ctx context.Context, arg InsertLogParams) error {
 		arg.Memo,
 		arg.CreatedAt,
 		arg.UpdatedAt,
+		arg.Status,
 	)
 	return err
 }
 
 const listLogs = `-- name: ListLogs :many
-SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at
+SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at, status
 FROM coffee_logs
 WHERE user_id = ?
   AND (?3 IS NULL OR log_type = ?3)
@@ -133,6 +136,7 @@ func (q *Queries) ListLogs(ctx context.Context, arg ListLogsParams) ([]CoffeeLog
 			&i.Memo,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -149,7 +153,7 @@ func (q *Queries) ListLogs(ctx context.Context, arg ListLogsParams) ([]CoffeeLog
 
 const updateLog = `-- name: UpdateLog :exec
 UPDATE coffee_logs
-SET recorded_at = ?, companions = ?, memo = ?, updated_at = ?
+SET recorded_at = ?, companions = ?, memo = ?, updated_at = ?, status = ?
 WHERE id = ? AND user_id = ?
 `
 
@@ -158,6 +162,7 @@ type UpdateLogParams struct {
 	Companions string  `json:"companions"`
 	Memo       *string `json:"memo"`
 	UpdatedAt  string  `json:"updated_at"`
+	Status     string  `json:"status"`
 	ID         string  `json:"id"`
 	UserID     string  `json:"user_id"`
 }
@@ -168,6 +173,7 @@ func (q *Queries) UpdateLog(ctx context.Context, arg UpdateLogParams) error {
 		arg.Companions,
 		arg.Memo,
 		arg.UpdatedAt,
+		arg.Status,
 		arg.ID,
 		arg.UserID,
 	)

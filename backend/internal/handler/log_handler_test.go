@@ -84,6 +84,7 @@ func sampleCafeLog() domain.CoffeeLogFull {
 			RecordedAt: "2026-03-29T10:00:00Z",
 			Companions: []string{},
 			LogType:    domain.LogTypeCafe,
+			Status:     domain.LogStatusPublished,
 			CreatedAt:  "2026-03-29T10:00:00Z",
 			UpdatedAt:  "2026-03-29T10:00:00Z",
 		},
@@ -92,6 +93,26 @@ func sampleCafeLog() domain.CoffeeLogFull {
 			CoffeeName:  coffeeName,
 			TastingTags: []string{"초콜릿", "체리"},
 			Rating:      &rating,
+		},
+	}
+}
+
+func sampleCafeDraftLog() domain.CoffeeLogFull {
+	return domain.CoffeeLogFull{
+		CoffeeLog: domain.CoffeeLog{
+			ID:         "log-draft",
+			UserID:     "user-1",
+			RecordedAt: "2026-03-29T10:00:00Z",
+			Companions: []string{},
+			LogType:    domain.LogTypeCafe,
+			Status:     domain.LogStatusDraft,
+			CreatedAt:  "2026-03-29T10:00:00Z",
+			UpdatedAt:  "2026-03-29T10:00:00Z",
+		},
+		Cafe: &domain.CafeDetail{
+			CafeName:    "블루보틀",
+			CoffeeName:  "",
+			TastingTags: []string{},
 		},
 	}
 }
@@ -484,4 +505,188 @@ func TestLogResponse_CompanionsNeverNull(t *testing.T) {
 	data, err := json.Marshal(resp)
 	require.NoError(t, err)
 	assert.Contains(t, string(data), `"companions":[]`)
+}
+
+// ---------------------------------------------------------------------------
+// Status — POST/PUT body 매핑, GET 쿼리스트링, 응답 직렬화
+// ---------------------------------------------------------------------------
+
+func TestCreateLog_DraftStatus_PassedToService(t *testing.T) {
+	var capturedReq service.CreateLogRequest
+	svc := &stubLogService{
+		createFunc: func(_ context.Context, userID string, req service.CreateLogRequest) (domain.CoffeeLogFull, error) {
+			capturedReq = req
+			return sampleCafeDraftLog(), nil
+		},
+	}
+	h := NewLogHandler(svc)
+
+	body := `{
+		"recorded_at": "2026-03-29T10:00:00Z",
+		"log_type": "cafe",
+		"status": "draft",
+		"companions": [],
+		"cafe": {"cafe_name": "블루보틀", "coffee_name": "", "tasting_tags": []}
+	}`
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/logs", bytes.NewBufferString(body))
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.CreateLog(w, r)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.Equal(t, domain.LogStatusDraft, capturedReq.Status)
+
+	var resp coffeeLogResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "draft", resp.Status)
+}
+
+func TestCreateLog_NoStatusField_PassesEmptyToService(t *testing.T) {
+	var capturedReq service.CreateLogRequest
+	svc := &stubLogService{
+		createFunc: func(_ context.Context, userID string, req service.CreateLogRequest) (domain.CoffeeLogFull, error) {
+			capturedReq = req
+			return sampleCafeLog(), nil
+		},
+	}
+	h := NewLogHandler(svc)
+
+	// status 미지정 — service가 기본값 published로 처리하도록 빈 값을 전달.
+	body := `{
+		"recorded_at": "2026-03-29T10:00:00Z",
+		"log_type": "cafe",
+		"companions": [],
+		"cafe": {"cafe_name": "블루보틀", "coffee_name": "메뉴", "tasting_tags": []}
+	}`
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/logs", bytes.NewBufferString(body))
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.CreateLog(w, r)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.Equal(t, domain.LogStatus(""), capturedReq.Status)
+}
+
+func TestUpdateLog_StatusField_PassedToService(t *testing.T) {
+	var capturedReq service.UpdateLogRequest
+	svc := &stubLogService{
+		updateFunc: func(_ context.Context, userID, logID string, req service.UpdateLogRequest) (domain.CoffeeLogFull, error) {
+			capturedReq = req
+			return sampleCafeLog(), nil
+		},
+	}
+	h := NewLogHandler(svc)
+
+	body := `{
+		"recorded_at": "2026-03-29T10:00:00Z",
+		"log_type": "cafe",
+		"status": "published",
+		"companions": [],
+		"cafe": {"cafe_name": "블루보틀", "coffee_name": "메뉴", "tasting_tags": []}
+	}`
+	r := httptest.NewRequest(http.MethodPut, "/api/v1/logs/log-1", bytes.NewBufferString(body))
+	r = withUserID(r, "user-1")
+	r = withChiParam(r, "id", "log-1")
+	w := httptest.NewRecorder()
+
+	h.UpdateLog(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, domain.LogStatusPublished, capturedReq.Status)
+}
+
+func TestListLogs_StatusQueryParam_ForwardedToService(t *testing.T) {
+	var capturedFilter service.ListLogsFilter
+	svc := &stubLogService{
+		listFunc: func(_ context.Context, userID string, filter service.ListLogsFilter) (service.ListLogsResult, error) {
+			capturedFilter = filter
+			return service.ListLogsResult{Items: []domain.CoffeeLogFull{}, HasNext: false}, nil
+		},
+	}
+	h := NewLogHandler(svc)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/logs?status=draft", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.ListLogs(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	require.NotNil(t, capturedFilter.Status)
+	assert.Equal(t, "draft", *capturedFilter.Status)
+}
+
+func TestListLogs_NoStatusParam_PassesNilToService(t *testing.T) {
+	var capturedFilter service.ListLogsFilter
+	svc := &stubLogService{
+		listFunc: func(_ context.Context, userID string, filter service.ListLogsFilter) (service.ListLogsResult, error) {
+			capturedFilter = filter
+			return service.ListLogsResult{Items: []domain.CoffeeLogFull{}, HasNext: false}, nil
+		},
+	}
+	h := NewLogHandler(svc)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/logs", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.ListLogs(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	// status 쿼리스트링 미지정 → 핸들러는 nil로 전달, service에서 published 기본값 적용.
+	assert.Nil(t, capturedFilter.Status)
+}
+
+func TestListLogs_InvalidStatus_ReturnsValidationError(t *testing.T) {
+	svc := &stubLogService{
+		listFunc: func(_ context.Context, userID string, filter service.ListLogsFilter) (service.ListLogsResult, error) {
+			return service.ListLogsResult{}, &service.ValidationError{Field: "status", Message: "published, draft, all 중 하나여야 합니다"}
+		},
+	}
+	h := NewLogHandler(svc)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/logs?status=archived", nil)
+	r = withUserID(r, "user-1")
+	w := httptest.NewRecorder()
+
+	h.ListLogs(w, r)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var errResp errorResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &errResp))
+	require.NotNil(t, errResp.Field)
+	assert.Equal(t, "status", *errResp.Field)
+}
+
+func TestUpdateLog_PublishedToDraft_ReturnsValidationError(t *testing.T) {
+	svc := &stubLogService{
+		updateFunc: func(_ context.Context, userID, logID string, req service.UpdateLogRequest) (domain.CoffeeLogFull, error) {
+			return domain.CoffeeLogFull{}, &service.ValidationError{Field: "status", Message: "발행된 로그를 드래프트로 되돌릴 수 없습니다"}
+		},
+	}
+	h := NewLogHandler(svc)
+
+	body := `{
+		"recorded_at": "2026-03-29T10:00:00Z",
+		"log_type": "cafe",
+		"status": "draft",
+		"companions": [],
+		"cafe": {"cafe_name": "블루보틀", "coffee_name": "메뉴", "tasting_tags": []}
+	}`
+	r := httptest.NewRequest(http.MethodPut, "/api/v1/logs/log-1", bytes.NewBufferString(body))
+	r = withUserID(r, "user-1")
+	r = withChiParam(r, "id", "log-1")
+	w := httptest.NewRecorder()
+
+	h.UpdateLog(w, r)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var errResp errorResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &errResp))
+	require.NotNil(t, errResp.Field)
+	assert.Equal(t, "status", *errResp.Field)
 }
