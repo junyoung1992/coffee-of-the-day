@@ -325,6 +325,10 @@ export function buildLogPayload(
   }
 
   if (state.logType === 'cafe') {
+    // 필수 식별 필드(cafe_name, coffee_name)는 status와 무관하게 trim한 원문을
+    // 그대로 보낸다. draft는 둘 다 빈 문자열이어도 백엔드 draft validator가
+    // "둘 중 하나는 필수" 규칙을 적용하고, published는 동일 필드를 필수 검증한다.
+    // 옵셔널 필드는 아래에서 normalizeText로 빈 값을 undefined로 정규화한다.
     payload.cafe = {
       cafe_name: state.cafe.cafeName.trim(),
       coffee_name: state.cafe.coffeeName.trim(),

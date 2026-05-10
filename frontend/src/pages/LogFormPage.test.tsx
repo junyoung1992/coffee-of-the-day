@@ -1,15 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import LogFormPage from './LogFormPage'
-import type { CafeLogFull, BrewLogFull } from '../types/log'
+import type { CafeLogFull, BrewLogFull, CoffeeLogFull } from '../types/log'
+
+// 테스트 간 useLog/mutate 동작을 바꿔야 하므로 vi.hoisted로 mutable state를 공유한다.
+// vi.mock은 호이스팅되므로 평범한 모듈 변수는 mock factory에서 참조할 수 없다.
+const mocks = vi.hoisted(() => ({
+  logData: undefined as CoffeeLogFull | undefined,
+  createMutateAsync: vi.fn(),
+  updateMutateAsync: vi.fn(),
+  deleteMutateAsync: vi.fn(),
+}))
 
 vi.mock('../hooks/useLogs', () => ({
-  useLog: () => ({ data: undefined, error: null, isError: false, isLoading: false }),
-  useCreateLog: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
-  useUpdateLog: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
-  useDeleteLog: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
+  useLog: () => ({ data: mocks.logData, error: null, isError: false, isLoading: false }),
+  useCreateLog: () => ({
+    mutateAsync: mocks.createMutateAsync,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
+  useUpdateLog: () => ({
+    mutateAsync: mocks.updateMutateAsync,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
+  useDeleteLog: () => ({
+    mutateAsync: mocks.deleteMutateAsync,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
   useLogList: () => ({
     data: { pages: [] },
     fetchNextPage: vi.fn(),
@@ -130,6 +154,12 @@ function renderEditMode(logId: string) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.logData = undefined
+  mocks.createMutateAsync.mockReset()
+  mocks.createMutateAsync.mockResolvedValue({ id: 'new-id' })
+  mocks.updateMutateAsync.mockReset()
+  mocks.updateMutateAsync.mockResolvedValue({ id: 'log-1' })
+  mocks.deleteMutateAsync.mockReset()
 })
 
 describe('LogFormPage clone 모드', () => {
@@ -191,6 +221,99 @@ describe('LogFormPage clone 모드', () => {
     const pressedButtons = screen.queryAllByRole('button', { pressed: true })
     const ratingPressed = pressedButtons.filter((btn) => /^\d\.\d$/.test(btn.textContent ?? ''))
     expect(ratingPressed).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 임시 저장 (드래프트) 버튼
+// ---------------------------------------------------------------------------
+
+const draftCafeLog: CafeLogFull = {
+  ...cafeLog,
+  id: 'log-draft-1',
+  status: 'draft',
+  cafe: { ...cafeLog.cafe, coffee_name: '' },
+}
+
+const publishedCafeLog: CafeLogFull = {
+  ...cafeLog,
+  status: 'published',
+}
+
+describe('LogFormPage 임시 저장 버튼', () => {
+  it('신규 cafe 폼에서 "임시 저장" 버튼이 표시된다', () => {
+    renderNewMode()
+    expect(screen.getByRole('button', { name: '임시 저장' })).toBeInTheDocument()
+  })
+
+  it('빈 cafe 폼에서는 "임시 저장" 버튼이 disabled다', () => {
+    renderNewMode()
+    expect(screen.getByRole('button', { name: '임시 저장' })).toBeDisabled()
+  })
+
+  it('cafe_name 입력 후 "임시 저장" 버튼이 enabled로 바뀐다', () => {
+    renderNewMode()
+    const cafeNameInput = screen.getByLabelText(/Cafe name/) as HTMLInputElement
+    fireEvent.change(cafeNameInput, { target: { value: '블루보틀' } })
+    expect(screen.getByRole('button', { name: '임시 저장' })).toBeEnabled()
+  })
+
+  it('"임시 저장" 클릭 시 createLog 호출 payload에 status="draft"가 포함된다', async () => {
+    renderNewMode()
+    fireEvent.change(screen.getByLabelText(/Cafe name/), { target: { value: '블루보틀' } })
+
+    fireEvent.click(screen.getByRole('button', { name: '임시 저장' }))
+
+    await waitFor(() => {
+      expect(mocks.createMutateAsync).toHaveBeenCalledTimes(1)
+    })
+    const payload = mocks.createMutateAsync.mock.calls[0][0]
+    expect(payload.status).toBe('draft')
+    expect(payload.cafe.cafe_name).toBe('블루보틀')
+  })
+
+  it('published 로그 수정 모드에서는 "임시 저장" 버튼이 표시되지 않는다', () => {
+    mocks.logData = publishedCafeLog
+    renderEditMode('log-cafe-1')
+
+    expect(screen.queryByRole('button', { name: '임시 저장' })).not.toBeInTheDocument()
+    // "변경 저장" 메인 버튼은 유지된다.
+    expect(screen.getByRole('button', { name: '변경 저장' })).toBeInTheDocument()
+  })
+
+  it('draft 로그 수정 모드에서는 "임시 저장" 버튼이 표시된다', () => {
+    mocks.logData = draftCafeLog
+    renderEditMode('log-draft-1')
+
+    expect(screen.getByRole('button', { name: '임시 저장' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '변경 저장' })).toBeInTheDocument()
+  })
+
+  it('draft 수정 모드에서 "임시 저장" 클릭 시 updateLog payload에 status="draft"가 포함된다', async () => {
+    mocks.logData = draftCafeLog
+    renderEditMode('log-draft-1')
+
+    fireEvent.click(screen.getByRole('button', { name: '임시 저장' }))
+
+    await waitFor(() => {
+      expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(1)
+    })
+    const payload = mocks.updateMutateAsync.mock.calls[0][0]
+    expect(payload.status).toBe('draft')
+  })
+
+  it('draft 수정 모드에서 "변경 저장" 클릭 시 updateLog payload에 status="published"가 포함된다', async () => {
+    // draft → published 전환 흐름
+    mocks.logData = { ...draftCafeLog, cafe: { ...draftCafeLog.cafe, coffee_name: '메뉴' } }
+    renderEditMode('log-draft-1')
+
+    fireEvent.click(screen.getByRole('button', { name: '변경 저장' }))
+
+    await waitFor(() => {
+      expect(mocks.updateMutateAsync).toHaveBeenCalledTimes(1)
+    })
+    const payload = mocks.updateMutateAsync.mock.calls[0][0]
+    expect(payload.status).toBe('published')
   })
 })
 

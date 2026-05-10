@@ -170,7 +170,9 @@ export function LogCard({ log }: { log: CoffeeLogFull }) {
         >
           복제
         </button>
-        <span className="transition group-hover:translate-x-1">View log</span>
+        <span className="transition group-hover:translate-x-1">
+          {isDraft ? '이어서 작성' : 'View log'}
+        </span>
       </div>
     </Link>
   )

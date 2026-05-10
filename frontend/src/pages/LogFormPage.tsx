@@ -226,8 +226,10 @@ function RecipePickerModal({
   onClose: () => void
   onSelect: (log: BrewLogFull) => void
 }) {
+  // status='published'를 명시해 미완성 brew 드래프트가 레시피 후보에 섞이지
+  // 않도록 한다. backend default가 published이지만 의도를 코드에서 드러낸다.
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
-    useLogList({ log_type: 'brew' })
+    useLogList({ log_type: 'brew', status: 'published' })
 
   const logs = (data?.pages.flatMap((p) => p.items) ?? []) as BrewLogFull[]
 

@@ -156,7 +156,9 @@ export default function LogDetailPage() {
         </div>
       ) : null}
 
-      {log ? (
+      {/* 드래프트는 useEffect에서 /edit으로 redirect되므로 한 프레임 깜빡임을
+          막기 위해 published만 상세 컨텐츠를 렌더한다. */}
+      {log && log.status !== 'draft' ? (
         <div className="space-y-6">
           <section className="rounded-[1.75rem] border border-amber-950/10 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(248,240,229,0.9))] p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
