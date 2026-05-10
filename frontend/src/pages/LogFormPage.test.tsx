@@ -9,6 +9,7 @@ vi.mock('../hooks/useLogs', () => ({
   useLog: () => ({ data: undefined, error: null, isError: false, isLoading: false }),
   useCreateLog: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
   useUpdateLog: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
+  useDeleteLog: () => ({ mutateAsync: vi.fn(), isPending: false, isError: false, error: null }),
   useLogList: () => ({
     data: { pages: [] },
     fetchNextPage: vi.fn(),

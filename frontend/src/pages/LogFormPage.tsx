@@ -12,7 +12,7 @@ import { Layout } from '../components/Layout'
 import { RatingInput } from '../components/RatingInput'
 import { TagInput } from '../components/TagInput'
 import { ApiError } from '../api/client'
-import { useCreateLog, useLog, useLogList, useUpdateLog } from '../hooks/useLogs'
+import { useCreateLog, useDeleteLog, useLog, useLogList, useUpdateLog } from '../hooks/useLogs'
 import { usePresetList, useUsePreset } from '../hooks/usePresets'
 import { useCompanionSuggestions, useTagSuggestions } from '../hooks/useSuggestions'
 import {
@@ -944,6 +944,7 @@ export default function LogFormPage() {
 
   const createMutation = useCreateLog()
   const updateMutation = useUpdateLog(id ?? '')
+  const deleteMutation = useDeleteLog()
   const { data: log, error: loadError, isError: isLoadError, isLoading } = useLog(id ?? '')
 
   useEffect(() => {
@@ -1030,18 +1031,44 @@ export default function LogFormPage() {
   const draftDisabled =
     !canSaveAsDraft(form) || activeMutation.isPending || (isEditMode && isLoading)
 
+  // 드래프트는 상세 페이지에서 redirect로 막혀 있어 거기 있는 삭제 버튼에
+  // 접근할 수 없다. published 로그와 동일한 삭제 흐름을 폼 화면에서 직접 제공한다.
+  const showDeleteButton = isEditMode && log?.status === 'draft'
+
+  async function handleDelete() {
+    if (!id) {
+      return
+    }
+    if (!window.confirm('이 드래프트를 삭제하시겠습니까?')) {
+      return
+    }
+
+    await deleteMutation.mutateAsync(id)
+    navigate('/')
+  }
+
   return (
     <Layout
       title={isEditMode ? '기록 수정' : isCloneMode ? '기록 복제' : '커피 기록 추가'}
       description={isCloneMode ? '이전 기록을 바탕으로 새 기록을 작성합니다. 날짜와 평가는 초기화됩니다.' : '필수 정보만 빠르게 기록하고, 더 기록하기를 눌러 상세 정보를 추가할 수 있습니다.'}
       actions={
         <>
-          <Link
-            to={isEditMode && id ? `/logs/${id}` : '/'}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
-          >
-            {isEditMode ? '상세로' : '목록으로'}
-          </Link>
+          {/* 드래프트 수정 중일 때는 상세 페이지로 보내봤자 LogDetailPage가
+              곧바로 edit으로 redirect한다(드래프트는 별도 상세 화면이 없음).
+              불필요한 왕복을 막기 위해 목적지를 홈으로 둔다. */}
+          {(() => {
+            const isDraftEdit = isEditMode && log?.status === 'draft'
+            const cancelTo = isEditMode && id && !isDraftEdit ? `/logs/${id}` : '/'
+            const cancelLabel = isEditMode && !isDraftEdit ? '상세로' : '목록으로'
+            return (
+              <Link
+                to={cancelTo}
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-stone-950/10 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-950/20 hover:bg-stone-100"
+              >
+                {cancelLabel}
+              </Link>
+            )
+          })()}
           {showDraftButton ? (
             <button
               type="button"
@@ -1114,6 +1141,25 @@ export default function LogFormPage() {
             </div>
           ) : null}
         </form>
+      ) : null}
+
+      {showDeleteButton ? (
+        <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-amber-950/10 pt-4">
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={deleteMutation.isPending}
+            className="rounded-full border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {deleteMutation.isPending ? '삭제 중...' : '드래프트 삭제'}
+          </button>
+        </div>
+      ) : null}
+
+      {showDeleteButton && deleteMutation.isError ? (
+        <div className="mt-3 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+          {getErrorMessage(deleteMutation.error)}
+        </div>
       ) : null}
     </Layout>
   )
