@@ -261,3 +261,85 @@ func TestGetCompanionSuggestions_OtherUserData_NotReturned(t *testing.T) {
 
 	assert.Empty(t, got)
 }
+
+// ---------------------------------------------------------------------------
+// Draft 격리 회귀 테스트
+// ---------------------------------------------------------------------------
+
+func TestGetTagSuggestions_DraftLog_Excluded(t *testing.T) {
+	db := setupTestDB(t)
+	now := "2026-01-01T00:00:00Z"
+
+	// published 로그에 "체리" 태그.
+	_, err := db.Exec(
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-pub", testUserID, now, "[]", "cafe", "published", now, now,
+	)
+	require.NoError(t, err)
+	_, err = db.Exec(
+		`INSERT INTO cafe_logs (log_id, cafe_name, coffee_name, tasting_tags) VALUES (?, ?, ?, ?)`,
+		"log-pub", "카페A", "에티오피아", `["체리"]`,
+	)
+	require.NoError(t, err)
+
+	// draft 로그에 "초콜릿" 태그.
+	_, err = db.Exec(
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-draft", testUserID, now, "[]", "cafe", "draft", now, now,
+	)
+	require.NoError(t, err)
+	_, err = db.Exec(
+		`INSERT INTO cafe_logs (log_id, cafe_name, coffee_name, tasting_tags) VALUES (?, ?, ?, ?)`,
+		"log-draft", "", "", `["초콜릿"]`,
+	)
+	require.NoError(t, err)
+
+	repo := NewSQLiteSuggestionRepository(db)
+	got, err := repo.GetTagSuggestions(context.Background(), testUserID, "")
+	require.NoError(t, err)
+
+	// 드래프트 로그의 태그는 자동완성에 포함되지 않아야 한다.
+	assert.Equal(t, []string{"체리"}, got)
+	assert.NotContains(t, got, "초콜릿")
+}
+
+func TestGetCompanionSuggestions_DraftLog_Excluded(t *testing.T) {
+	db := setupTestDB(t)
+	now := "2026-01-01T00:00:00Z"
+
+	// published 로그에 "지수" companion.
+	_, err := db.Exec(
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-pub", testUserID, now, `["지수"]`, "cafe", "published", now, now,
+	)
+	require.NoError(t, err)
+	_, err = db.Exec(
+		`INSERT INTO cafe_logs (log_id, cafe_name, coffee_name) VALUES (?, ?, ?)`,
+		"log-pub", "카페A", "에티오피아",
+	)
+	require.NoError(t, err)
+
+	// draft 로그에 "민준" companion.
+	_, err = db.Exec(
+		`INSERT INTO coffee_logs (id, user_id, recorded_at, companions, log_type, status, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"log-draft", testUserID, now, `["민준"]`, "cafe", "draft", now, now,
+	)
+	require.NoError(t, err)
+	_, err = db.Exec(
+		`INSERT INTO cafe_logs (log_id, cafe_name, coffee_name) VALUES (?, ?, ?)`,
+		"log-draft", "", "",
+	)
+	require.NoError(t, err)
+
+	repo := NewSQLiteSuggestionRepository(db)
+	got, err := repo.GetCompanionSuggestions(context.Background(), testUserID, "")
+	require.NoError(t, err)
+
+	// 드래프트 로그의 companion은 자동완성에 포함되지 않아야 한다.
+	assert.Equal(t, []string{"지수"}, got)
+	assert.NotContains(t, got, "민준")
+}

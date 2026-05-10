@@ -62,6 +62,7 @@ func (r *SQLiteLogRepository) CreateLog(ctx context.Context, log domain.CoffeeLo
 		RecordedAt: log.RecordedAt,
 		Companions: domain.StringsToJSON(log.Companions),
 		LogType:    string(log.LogType),
+		Status:     string(log.Status),
 		Memo:       log.Memo,
 		CreatedAt:  log.CreatedAt,
 		UpdatedAt:  log.UpdatedAt,
@@ -139,7 +140,7 @@ func (r *SQLiteLogRepository) GetLogByID(ctx context.Context, logID, userID stri
 }
 
 func (r *SQLiteLogRepository) ListLogs(ctx context.Context, userID string, filter ListFilter) ([]domain.CoffeeLogFull, error) {
-	query := `SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at
+	query := `SELECT id, user_id, recorded_at, companions, log_type, memo, created_at, updated_at, status
 		FROM coffee_logs WHERE user_id = ?`
 	args := []any{userID}
 
@@ -174,12 +175,13 @@ func (r *SQLiteLogRepository) ListLogs(ctx context.Context, userID string, filte
 	var items []domain.CoffeeLogFull
 	for rows.Next() {
 		var f domain.CoffeeLogFull
-		var companions, logType string
-		if err := rows.Scan(&f.ID, &f.UserID, &f.RecordedAt, &companions, &logType, &f.Memo, &f.CreatedAt, &f.UpdatedAt); err != nil {
+		var companions, logType, status string
+		if err := rows.Scan(&f.ID, &f.UserID, &f.RecordedAt, &companions, &logType, &f.Memo, &f.CreatedAt, &f.UpdatedAt, &status); err != nil {
 			return nil, fmt.Errorf("list logs: scan: %w", err)
 		}
 		f.Companions = domain.JSONToStrings(companions)
 		f.LogType = domain.LogType(logType)
+		f.Status = domain.LogStatus(status)
 		items = append(items, f)
 	}
 	if err := rows.Err(); err != nil {
@@ -242,6 +244,7 @@ func (r *SQLiteLogRepository) UpdateLog(ctx context.Context, log domain.CoffeeLo
 	err = qtx.UpdateLog(ctx, db.UpdateLogParams{
 		RecordedAt: log.RecordedAt,
 		Companions: domain.StringsToJSON(log.Companions),
+		Status:     string(log.Status),
 		Memo:       log.Memo,
 		UpdatedAt:  log.UpdatedAt,
 		ID:         log.ID,
@@ -480,6 +483,7 @@ func coffeeLogToFull(row db.CoffeeLog) domain.CoffeeLogFull {
 			RecordedAt: row.RecordedAt,
 			Companions: domain.JSONToStrings(row.Companions),
 			LogType:    domain.LogType(row.LogType),
+			Status:     domain.LogStatus(row.Status),
 			Memo:       row.Memo,
 			CreatedAt:  row.CreatedAt,
 			UpdatedAt:  row.UpdatedAt,

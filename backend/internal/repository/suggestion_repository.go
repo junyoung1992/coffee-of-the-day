@@ -25,19 +25,21 @@ func NewSQLiteSuggestionRepository(db *sql.DB) *SQLiteSuggestionRepository {
 	return &SQLiteSuggestionRepository{db: db}
 }
 
+// 자동완성 집계는 published 로그만 대상으로 한다. draft는 미완성 상태이므로
+// 사용자가 의도하지 않은 임시 입력값이 자동완성에 노출되지 않도록 격리한다.
 const tagSuggestionsQuery = `
 WITH all_tags AS (
     SELECT j.value AS tag
     FROM cafe_logs cl
     JOIN coffee_logs l ON l.id = cl.log_id
     JOIN json_each(cl.tasting_tags) j
-    WHERE l.user_id = ?
+    WHERE l.user_id = ? AND l.status = 'published'
     UNION ALL
     SELECT j.value AS tag
     FROM brew_logs bl
     JOIN coffee_logs l ON l.id = bl.log_id
     JOIN json_each(bl.tasting_tags) j
-    WHERE l.user_id = ?
+    WHERE l.user_id = ? AND l.status = 'published'
 )
 SELECT tag, COUNT(*) AS cnt
 FROM all_tags
@@ -62,6 +64,7 @@ SELECT j.value AS companion, COUNT(*) AS cnt
 FROM coffee_logs l
 JOIN json_each(l.companions) j
 WHERE l.user_id = ?
+  AND l.status = 'published'
   AND (? = '' OR LOWER(j.value) LIKE LOWER(?) || '%')
 GROUP BY companion
 ORDER BY cnt DESC, companion ASC

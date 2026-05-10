@@ -63,6 +63,7 @@ type CoffeeLog struct {
 	Memo       *string `json:"memo"`
 	CreatedAt  string  `json:"created_at"`
 	UpdatedAt  string  `json:"updated_at"`
+	Status     string  `json:"status"`
 }
 
 type Preset struct {

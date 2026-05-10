@@ -41,6 +41,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 		"002_create_coffee_logs.up.sql",
 		"003_create_cafe_logs.up.sql",
 		"004_create_brew_logs.up.sql",
+		"008_add_status_to_coffee_logs.up.sql",
 	} {
 		raw, err := os.ReadFile(filepath.Join(migrationsDir, name))
 		require.NoError(t, err, "reading migration %s", name)
@@ -80,6 +81,7 @@ func newCafeLog(id, recordedAt string) domain.CoffeeLogFull {
 			RecordedAt: recordedAt,
 			Companions: []string{"Alice"},
 			LogType:    domain.LogTypeCafe,
+			Status:     domain.LogStatusPublished,
 			Memo:       ptrStr("좋은 카페"),
 			CreatedAt:  "2026-03-15T10:00:00Z",
 			UpdatedAt:  "2026-03-15T10:00:00Z",
@@ -107,6 +109,7 @@ func newBrewLog(id, recordedAt string) domain.CoffeeLogFull {
 			RecordedAt: recordedAt,
 			Companions: []string{},
 			LogType:    domain.LogTypeBrew,
+			Status:     domain.LogStatusPublished,
 			Memo:       nil,
 			CreatedAt:  "2026-03-16T08:00:00Z",
 			UpdatedAt:  "2026-03-16T08:00:00Z",
@@ -448,3 +451,4 @@ func TestDeleteLog_RemovesLogAndCascadesToSubTable(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, count, "cafe_logs row should be deleted by CASCADE")
 }
+

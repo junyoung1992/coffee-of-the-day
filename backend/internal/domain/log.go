@@ -8,6 +8,14 @@ const (
 	LogTypeBrew LogType = "brew"
 )
 
+// LogStatus indicates whether the log is a work-in-progress draft or a published entry.
+type LogStatus string
+
+const (
+	LogStatusDraft     LogStatus = "draft"
+	LogStatusPublished LogStatus = "published"
+)
+
 // RoastLevel indicates how darkly the beans were roasted.
 type RoastLevel string
 
@@ -38,6 +46,7 @@ type CoffeeLog struct {
 	RecordedAt string
 	Companions []string
 	LogType    LogType
+	Status     LogStatus
 	Memo       *string
 	CreatedAt  string
 	UpdatedAt  string
