@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { RatingDisplay } from '../components/RatingDisplay'
@@ -72,6 +72,14 @@ export default function LogDetailPage() {
   const createPresetMutation = useCreatePreset()
   const { data: log, error, isError, isLoading } = useLog(id ?? '')
   const brewSteps = log?.log_type === 'brew' ? log.brew.brew_steps ?? [] : []
+
+  // 드래프트는 상세 화면에서 보여줄 의미 있는 정보가 적으므로 곧바로 수정 폼으로 보낸다.
+  // replace: true로 history에 남기지 않아 뒤로가기 시 무한 루프를 막는다.
+  useEffect(() => {
+    if (log?.status === 'draft' && id) {
+      navigate(`/logs/${id}/edit`, { replace: true })
+    }
+  }, [log?.status, id, navigate])
 
   const [showPresetInput, setShowPresetInput] = useState(false)
   const [presetName, setPresetName] = useState('')

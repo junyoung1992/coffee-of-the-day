@@ -46,12 +46,25 @@ export default function HomePage() {
     log_type: logType,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
+    status: 'published',
   })
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   const logs = useMemo(
     () => data?.pages.flatMap((page) => page.items) ?? [],
     [data?.pages],
+  )
+
+  // 드래프트 섹션은 별도 호출로 첫 페이지(최대 12건)만 표시한다.
+  // 사용자당 드래프트가 많지 않다는 가정 하에 무한 스크롤은 적용하지 않는다.
+  // params 객체가 다르면 react-query 캐시도 분리되어 두 섹션이 자연스럽게 격리된다.
+  const { data: draftData } = useLogList({
+    limit: 12,
+    status: 'draft',
+  })
+  const drafts = useMemo(
+    () => draftData?.pages.flatMap((page) => page.items) ?? [],
+    [draftData?.pages],
   )
 
   useEffect(() => {
@@ -164,6 +177,20 @@ export default function HomePage() {
             </span>
           ) : null}
         </div>
+
+        {drafts.length > 0 ? (
+          <section className="space-y-3">
+            <header className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-stone-900">작성 중인 기록</h2>
+              <span className="text-xs text-stone-500">{drafts.length}건</span>
+            </header>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {drafts.map((log) => (
+                <LogCard key={log.id} log={log} />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <FilterBar
           logType={logType}
